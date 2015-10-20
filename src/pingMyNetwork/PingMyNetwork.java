@@ -5,8 +5,10 @@
  */
 package pingMyNetwork;
 
-import pingMyNetwork.Model.Pinger;
-import pingMyNetwork.Model.IPv4Address;
+import java.io.IOException;
+import pingMyNetwork.model.Pinger;
+import pingMyNetwork.model.IPv4Address;
+import pingMyNetwork.view.ConsoleOutput;
 
 /**
  *
@@ -19,13 +21,30 @@ public class PingMyNetwork {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        Pinger pinger = new Pinger();
-//        pinger.getLocalIPs();
-        // TODO code application logic here
-        IPv4Address test = new IPv4Address("192.168.18.101", 24);
-        for (IPv4Address value : test.generateSubnetIPs()) {
-            System.out.println(value.toString());
-        }
+                int i= 0;
+                ConsoleOutput menu = new ConsoleOutput();
+                Pinger pinger = new Pinger();
+                menu.renderInterfaces(pinger.getLocalIPs());
+                try{
+                i = System.in.read() - 48;
+                }
+                catch(IOException e){
+                    System.out.println(e.getMessage());
+                }
+                menu.renderInterfaces(pinger.ping(i, 100));
+//            switch(args[0]){
+//                case "-h":
+//                    menu.renderHelp();
+//                    break;
+//                case "-l":
+//                    menu.renderInterfaces(pinger.getLocalIPs());
+//                    break;
+//                case "-p"
+//                    if(args[1].equals("-t")){
+//                        menu.renderInterfaces(pinger.ping(, sec));
+//                    }
+//                    break;
+//            }
     }
 
 }

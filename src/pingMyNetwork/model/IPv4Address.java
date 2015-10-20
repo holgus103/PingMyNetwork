@@ -1,14 +1,16 @@
-package pingMyNetwork.Model;
+package pingMyNetwork.model;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
  * @author holgus103
  * @version %I%
  */
-public class IPv4Address {
+public class IPv4Address{
 
     // Constants
     static final private int IP4_GROUPS = 4;
@@ -31,6 +33,9 @@ public class IPv4Address {
      * @param mask Mask of the IP address
      */
     public IPv4Address(String ip, int mask) {
+        if(ip.charAt(0) == '/'){
+            ip = ip.substring(1);
+        }
         this.address = 0;
         this.mask = mask < 8 || mask > 32 ? 24 : mask;
         short address[] = new short[this.IP4_GROUPS];
@@ -87,6 +92,25 @@ public class IPv4Address {
         for (int i = 1; i < this.IP4_GROUPS; i++) {
             ret += ".";
             ret += this.address >> (24 - 8 * i) & 0xFF;
+        }
+        return ret;
+    }
+    
+    /**
+     *
+     * @param timeout time the program waits (in ms) for a response
+     * @return whether or not a IP is reachable
+     */
+    public boolean isReachable(int timeout){
+        boolean ret = false;
+        try{
+            ret = InetAddress.getByName(this.toString()).isReachable(timeout);
+        }
+        catch(IOException e){
+            System.out.println(e.getMessage());
+        }
+        catch(IllegalArgumentException e){
+            System.out.println(e.getMessage());
         }
         return ret;
     }

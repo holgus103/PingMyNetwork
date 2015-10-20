@@ -1,4 +1,4 @@
-package pingMyNetwork.Model;
+package pingMyNetwork.model;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -19,14 +19,29 @@ public class Pinger {
     /**
      * Array of already discovered IPs
      */
-    private String mask;
     private ArrayList<IPv4Address> ips;
 
+    public Pinger() {
+        this.ips = this.getLocalIPs();
+    }
+
     /**
-     * @return List of IPs
+     * @return List of online IPs within the subnet
      */
-    public ArrayList<IPv4Address> ping() {
-        return null;
+    public ArrayList<IPv4Address> ping(int i, int sec) {
+        ArrayList<IPv4Address> onlineNodes = new ArrayList<IPv4Address>();
+        try {
+            ArrayList<IPv4Address> subnet = this.ips.get(i).generateSubnetIPs();
+            for (IPv4Address value : subnet) {
+                if (value.isReachable(sec)) {
+                    onlineNodes.add(value);
+                }
+            }
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println(e.getMessage());
+        }
+        return onlineNodes;
+
     }
 
     /**
@@ -51,12 +66,11 @@ public class Pinger {
     }
 
     /**
-     *
-     * @return
+     * 
+     * @return a set of IPs from the machine's subnet
      */
-    public ArrayList<IPv4Address> getSubnetIPs() {
-        // to do
-        return null;
+    private ArrayList<IPv4Address> getSubnetIPs(int i) {
+        return this.ips.get(i).generateSubnetIPs();
     }
 
 }
