@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package pingMyNetwork.view;
 
 import java.util.ArrayList;
@@ -34,5 +29,9 @@ public class ConsoleOutput {
         System.out.println("-h : displays help");
         System.out.println("-p [i]: starts network discovery using interface no i");
                 
+    }
+    
+    public void renderError(){
+        System.out.println("Invalid arguments! Use -h for help");
     }
 }
