@@ -15,10 +15,18 @@ public class ConsoleOutput {
      * @param interfaces to display in the console
      */
     public void renderInterfaces(ArrayList<IPv4Address> interfaces) {
+
         for(IPv4Address value:interfaces)
         System.out.println(value.toString());
     }
-
+    
+    /**
+     * Renders the IP address provided in the view
+     * @param ip IP to be rendered
+     */
+    public void displayIP(IPv4Address ip){
+        System.out.println(ip.toString());
+    }
     /**
      *  Renders the help instructions 
      */
@@ -31,7 +39,18 @@ public class ConsoleOutput {
                 
     }
     
-    public void renderError(){
+    /**
+     * In case the used has provided invalid arguments 
+     */
+    public void renderArgsError(){
         System.out.println("Invalid arguments! Use -h for help");
+    }
+    
+    /**
+     *
+     * @param e Exception to be logged
+     */
+    public void renderException(Throwable e){
+        System.out.println(e.getMessage());
     }
 }
