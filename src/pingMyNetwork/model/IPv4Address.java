@@ -6,7 +6,7 @@ import pingMyNetwork.exception.InvalidIPAddressException;
 
 /**
  *
- * @author holgus103
+ * @author Jakub Suchan
  * @version %I%
  */
 public class IPv4Address{

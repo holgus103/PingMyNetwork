@@ -5,7 +5,7 @@ import pingMyNetwork.model.IPv4Address;
 
 /**
  *
- * @author holgus103
+ * @author Jakub Suchan
  * @version %I%
  */
 public class ConsoleOutput {
@@ -31,7 +31,7 @@ public class ConsoleOutput {
      *  Renders the help instructions 
      */
     public void renderHelp(){
-        System.out.println("SYNTAX:");
+        System.out.println("SYNTAX: -l | -p | -h [interface] [-t | -m] ");
         System.out.println("-l : lists all available interfaces");
         System.out.println("-t : sets timeout for network discovery");
         System.out.println("-h : displays help");

@@ -7,7 +7,7 @@ package pingMyNetwork.exception;
 
 /**
  *
- * @author holgus103
+ * @author Jakub Suchan
  * @version %I%
  */
 public class InvalidIPAddressException extends Exception{

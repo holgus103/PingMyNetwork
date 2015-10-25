@@ -8,21 +8,56 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import org.icmp4j.IcmpPingRequest;
+import org.icmp4j.IcmpPingResponse;
+import org.icmp4j.IcmpPingUtil;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
 
 /**
  *
- * @author holgus103
+ * @author Jakub Suchan
  * @version %I%
  */
 public class PingController {
-    
+
     /**
      * The maximum number of threads used for network discovery
      */
-    private static final int MAX_THREADS = 64;
+    private static final int MAX_THREADS = 8;
+    /**
+     * The default interface used for pinging
+     */
+    private static final int DEFAULT_INTERFACE = 0;
+    /**
+     * The default timeout used for pinging
+     */
+    private static final int DEFAULT_TIMEOUT = 1000;
+    /**
+     * Multithreading is disabled by default as it causes problems on Windows
+     */
+    private static final boolean DEFAULT_MULTITHREADING = false;
+    /**
+     * Flag for option ping
+     */
+    private static final String PING_FLAG = "-p";
+    /** 
+     * Flag for option timeout
+     */
+    private static final String TIMEOUT_FLAG = "-t";
+    /**
+     * Flag for option list
+     */
+    private static final String LIST_FLAG = "-l";
+    /** 
+     * Flag for option help
+     */ 
+    private static final String HELP_FLAG = "-h";
+    /** 
+     * Flag for option multi-threading
+     */
+    private static final String MULTITHREADING_FLAG = "-m";
     /**
      * Array of references to the above mentioned threads
      */
@@ -35,12 +70,13 @@ public class PingController {
      * Array of current machine's IPs
      */
     private final ArrayList<IPv4Address> ips;
+
     /**
      * Private class used for pinging asynchronously
-     * @author holgus103
+     *
+     * @author Jakub Suchan
      * @version %I%
      */
-
     private class PingIP extends Thread {
 
         // Private properties
@@ -55,9 +91,11 @@ public class PingController {
         /**
          * Counter used to determine the amount of discovered IPs
          */
-        private Integer ipCounter; 
+        private Integer ipCounter;
+
         /**
          * Thread constructor
+         *
          * @param ip IP the thread is going to ping
          * @param timeout pinging timeout
          * @param ipCounter counter of discovered IPs
@@ -67,28 +105,43 @@ public class PingController {
             this.timeout = timeout;
             this.ipCounter = ipCounter;
         }
-        
+
         /**
-         * Thread's main method that checks for IP availability.
-         * If the current IP is found online the global counter will be increased
-         * and the IP address rendered in the view right away. 
+         * Thread's main method that checks for IP availability. If the current
+         * IP is found online the global counter will be increased and the IP
+         * address rendered in the view right away.
          */
         @Override
         public void run() {
-            try{
-            if (this.ip.isReachable(timeout)) {
-                this.ipCounter++;
-                menu.displayIP(ip);
-            }
-            }
-            catch(IOException | IllegalAccessError e){
+            try {
+                if (ip.isReachable(timeout)) {
+                    this.ipCounter++;
+                    menu.displayIP(ip);
+                }
+            } catch (IOException e) {
                 menu.renderException(e);
             }
         }
     }
 
     /**
-     * The constructor initializes the array of references to threads and creates a view object.
+     * Method generating all IPs of a subnet.
+     *
+     * @return a set of IPs from the machine's subnet
+     */
+    private ArrayList<IPv4Address> getSubnetIPs(IPv4Address address) {
+        ArrayList<IPv4Address> addressList = new ArrayList<>();
+        int count = (int) Math.pow(2, 32 - address.getMask());
+        int prefix = address.getRawIP() & 0xFFFFFFFF << (32 - address.getMask());
+        for (int i = 0; i < count; i++) {
+            addressList.add(new IPv4Address(prefix | i, address.getMask()));
+        }
+        return addressList;
+    }
+
+    /**
+     * The constructor initializes the array of references to threads and
+     * creates a view object.
      */
     public PingController() {
         this.menu = new ConsoleOutput();
@@ -97,8 +150,9 @@ public class PingController {
     }
 
     /**
-     *  Main method of the controller that analyzes user input and fires up the
-     *  corresponding methods.
+     * Main method of the controller that analyzes user input and fires up the
+     * corresponding methods.
+     *
      * @param args
      */
     public void run(String[] args) {
@@ -113,8 +167,10 @@ public class PingController {
                             menu.renderInterfaces(this.ips);
                             break;
                         case "-p":
-                            this.ping();
+                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
                             break;
+                        case "-m":
+                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, true);
                         default:
                             menu.renderArgsError();
 
@@ -122,86 +178,131 @@ public class PingController {
                 }
                 break;
             case 2:
-                if (args[0].equals("-p")) {
-                    try {
-                        this.ping(Integer.parseInt(args[1]));
-                    } catch (NumberFormatException e) {
-                        menu.renderException(e);
+                if (args[0].equals(PingController.PING_FLAG)) {
+                    if (args[1].equals(PingController.MULTITHREADING_FLAG)) {
+                        this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                    } else {
+                        try {
+                            this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                        } catch (NumberFormatException e) {
+                            menu.renderException(e);
+                        }
                     }
                 } else {
                     menu.renderArgsError();
                 }
                 break;
             case 3:
-                if (args[0].equals("-p")) {
-                    if (args[1].equals("-t")) {
+                if (args[0].equals(PingController.PING_FLAG)) {
+                    if (args[1].equals(PingController.TIMEOUT_FLAG)) {
                         try {
-                            this.ping(0, Integer.parseInt(args[1]));
+                            this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[1]), PingController.DEFAULT_MULTITHREADING);
                         } catch (NumberFormatException e) {
                             menu.renderException(e);
                         }
                     } else {
-                        menu.renderArgsError();
+                        if (args[2].equals(PingController.MULTITHREADING_FLAG)) {
+                            try {
+                                this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, true);
+                            } catch (NumberFormatException e) {
+                                menu.renderException(e);
+                            }
+                        } else {
+                            menu.renderArgsError();
+                        }
                     }
                 } else {
                     menu.renderArgsError();
                 }
                 break;
             case 4:
-                if (args[0].equals("-p")) {
-                    if (args[2].equals("-t")) {
+                if (args[0].equals(PingController.PING_FLAG)) {
+                    if (args[1].equals(PingController.TIMEOUT_FLAG) && args[3].equals(PingController.MULTITHREADING_FLAG)) {
                         try {
-                            this.ping(Integer.parseInt(args[3]), Integer.parseInt(args[1]));
+                            this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[2]), true);
                         } catch (NumberFormatException e) {
                             menu.renderException(e);
                         }
                     } else {
-                        menu.renderArgsError();
+                        if (args[2].equals(PingController.TIMEOUT_FLAG)) {
+                            try {
+                                this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), PingController.DEFAULT_MULTITHREADING);
+                            } catch (NumberFormatException e) {
+                                menu.renderException(e);
+                            }
+                        } else {
+                            menu.renderArgsError();
+                        }
                     }
                 } else {
                     menu.renderArgsError();
                 }
                 break;
+            case 5:
+                if (args[0].equals(PingController.PING_FLAG) && args[2].equals(PingController.TIMEOUT_FLAG) && args[4].equals(PingController.MULTITHREADING_FLAG)) {
+                    try {
+                        this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), true);
+                    } catch (NumberFormatException e) {
+                        menu.renderException(e);
+                    }
+                } else {
+                    if (args[0].equals(PingController.PING_FLAG) && args[2].equals(PingController.MULTITHREADING_FLAG) && args[3].equals(PingController.TIMEOUT_FLAG)) {
+                        try {
+                            this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[4]), true);
+                        } catch (NumberFormatException e) {
+                            menu.renderException(e);
+                        }
+                    }
+                    else{
+                        menu.renderArgsError();
+                    }
+                }
+            break;
             default:
                 menu.renderArgsError();
         }
     }
-        /**
-         * Method exploring the network and pining all subnet IPs,
-         * the IPs that are found online will be displayer in real-time 
-         * in the view that's been initialized within this class as menu.
-         * By default the method will use the first interface and
-         * a timeout of1000 ms.
-         * @param args array of parameters:
-         * 0 - network interface id
-         * 1 - timeout for pinging
-         * @return count of all found IPs
-         */
-    public int ping(int... args) {
+
+    /**
+     * Method exploring the network and pining all subnet IPs, the IPs that are
+     * found online will be displayer in real-time in the view that's been
+     * initialized within this class as menu. By default the method will use the
+     * first interface and a timeout of1000 ms.
+     *
+     * @param i no of the interface used for pinging
+     * @param sec pinging timeout
+     * @param multihreading determines whether multithreading is enabled or not
+     * @return count of all found IPs
+     */
+    public int ping(int i, int sec, boolean multihreading) {
         // Default parameters 
-        int i = 0, sec = 1000, threadCounter = 0;
+        int threadCounter = 0;
         Integer ipCounter = 0;
         // Check if params were supplied
-        if (args.length > 0) {
-            i = args[0];
-            if (args.length > 1) {
-                sec = args[1];
-            }
-        }
         try {
             for (IPv4Address value : this.getSubnetIPs(this.ips.get(i))) {
-                if (threadCounter < PingController.MAX_THREADS) {
-                    this.threads[threadCounter] = new PingIP(value, sec, ipCounter);
-                    this.threads[threadCounter].start();
-                    threadCounter++;
-                } else {
-                    threadCounter = 0;
-                    for (Thread worker : this.threads) {
-                        try {
-                            worker.join();
-                        } catch (InterruptedException e) {
-                            System.out.println(e.getMessage());
+                if (multihreading) {
+                    if (threadCounter < PingController.MAX_THREADS) {
+                        this.threads[threadCounter] = new PingIP(value, sec, ipCounter);
+                        this.threads[threadCounter].start();
+                        threadCounter++;
+                    } else {
+                        threadCounter = 0;
+                        for (Thread worker : this.threads) {
+                            try {
+                                worker.join();
+                            } catch (InterruptedException e) {
+                                menu.renderException(e);
+                            }
                         }
+                    }
+                } else {
+                    final IcmpPingRequest request = IcmpPingUtil.createIcmpPingRequest();
+                    request.setHost(value.toString());
+                    request.setTimeout(sec);
+                    final IcmpPingResponse response = IcmpPingUtil.executePingRequest(request);
+                    if (response.getSuccessFlag()) {
+                        menu.displayIP(value);
                     }
                 }
             }
@@ -214,7 +315,8 @@ public class PingController {
 
     /**
      * Method fetching all IPs of the current machine
-     * @return machine's  IPs
+     *
+     * @return machine's IPs
      */
     public ArrayList<IPv4Address> getLocalIPs() {
         ArrayList<IPv4Address> validIPs = new ArrayList<>();
@@ -234,19 +336,4 @@ public class PingController {
         }
         return validIPs;
     }
-
-    /**
-     * Method generating all IPs of a subnet.
-     * @return a set of IPs from the machine's subnet
-     */
-    private ArrayList<IPv4Address> getSubnetIPs(IPv4Address address) {
-        ArrayList<IPv4Address> addressList = new ArrayList<>();
-        int count = (int) Math.pow(2, 32 - address.getMask());
-        int prefix = address.getRawIP() & 0xFFFFFFFF << (32 - address.getMask());
-        for (int i = 0; i < count; i++) {
-            addressList.add(new IPv4Address(prefix | i, address.getMask()));
-        }
-        return addressList;
-    }
-
 }
