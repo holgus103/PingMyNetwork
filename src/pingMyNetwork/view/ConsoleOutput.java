@@ -47,10 +47,18 @@ public class ConsoleOutput {
         System.out.println("Invalid arguments! Use -h for help");
     }
     
+    /**
+     *
+     * @param ip IP to be displayed
+     */
     public void renderInit(IPv4Address ip){
         System.out.println("Starting discovery using: " + ip.toString());
     }
     
+    /**
+     *
+     * @param result result to be displayed
+     */
     public void renderEnd(int result){
         System.out.println("Discovery finished. Finds: " + result);
     }

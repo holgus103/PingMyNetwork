@@ -37,7 +37,11 @@ public class IPv4Address {
     /**
      * Default mask value
      */
-    public static final int DEFAULT_MASK = 24;
+    private static final int DEFAULT_MASK = 24;
+    /**
+     * Max IP value
+     */
+    private static final int MAX_IP = 255;
     // Private properties
     /**
      * Raw address
@@ -88,7 +92,7 @@ public class IPv4Address {
 
             }
             addr[i] = Short.parseShort(ip.substring(0, endIndex));
-            if (addr[i] > 255 || addr[i]<0) {
+            if (addr[i] > this.MAX_IP  || addr[i]<0) {
                 throw new InvalidIPAddressException("The provided IP address is invalid");
             }
             ip = ip.substring(endIndex + 1);
@@ -109,6 +113,16 @@ public class IPv4Address {
         this.mask = mask;
     }
 
+    /**
+     *
+     * @param ip IP address of the new object
+     * @throws NumberFormatException
+     * @throws IndexOutOfBoundsException
+     * @throws InvalidIPAddressException
+     */
+    public IPv4Address(String ip) throws NumberFormatException, IndexOutOfBoundsException, InvalidIPAddressException{
+        this(ip,DEFAULT_MASK);
+    }
     @Override
     public String toString() {
         String ret = "" + (this.address >> (this.IP4_GROUPS - 1) * this.BITS_PER_BYTE & 0xFF);
