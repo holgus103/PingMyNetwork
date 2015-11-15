@@ -5,7 +5,8 @@ import pingMyNetwork.controller.PingController;
 /**
  *
  * @author Jakub Suchan
- * @version %I%
+ * @version     %I%, %G%
+ * @since       1.0
  */
 public class PingMyNetwork {
     

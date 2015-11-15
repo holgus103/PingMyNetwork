@@ -8,9 +8,6 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import org.icmp4j.IcmpPingRequest;
-import org.icmp4j.IcmpPingResponse;
-import org.icmp4j.IcmpPingUtil;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
@@ -18,7 +15,8 @@ import pingMyNetwork.view.*;
 /**
  *
  * @author Jakub Suchan
- * @version %I%
+ * @version %I%, %G%
+ * @since 1.0
  */
 public class PingController {
 
@@ -38,26 +36,26 @@ public class PingController {
      * Multithreading is disabled by default as it causes problems on Windows
      */
     private static final boolean DEFAULT_MULTITHREADING = false;
-    /**
-     * Flag for option ping
-     */
-    private static final String PING_FLAG = "-p";
-    /** 
-     * Flag for option timeout
-     */
-    private static final String TIMEOUT_FLAG = "-t";
-    /**
-     * Flag for option list
-     */
-    private static final String LIST_FLAG = "-l";
-    /** 
-     * Flag for option help
-     */ 
-    private static final String HELP_FLAG = "-h";
-    /** 
-     * Flag for option multi-threading
-     */
-    private static final String MULTITHREADING_FLAG = "-m";
+//    /**
+//     * Flag for option ping
+//     */
+//    private static final String PING_FLAG = "-p";
+//    /**
+//     * Flag for option timeout
+//     */
+//    private static final String TIMEOUT_FLAG = "-t";
+//    /**
+//     * Flag for option list
+//     */
+//    private static final String LIST_FLAG = "-l";
+//    /**
+//     * Flag for option help
+//     */
+//    private static final String HELP_FLAG = "-h";
+//    /**
+//     * Flag for option multi-threading
+//     */
+//    private static final String MULTITHREADING_FLAG = "-m";
     /**
      * Array of references to the above mentioned threads
      */
@@ -75,7 +73,8 @@ public class PingController {
      * Private class used for pinging asynchronously
      *
      * @author Jakub Suchan
-     * @version %I%
+     * @version %I%, %G%
+     * @since 1.0
      */
     private class PingIP extends Thread {
 
@@ -114,7 +113,7 @@ public class PingController {
         @Override
         public void run() {
             try {
-                if (ip.isReachable(timeout)) {
+                if (ip.isReachable(timeout, true)) {
                     this.ipCounter++;
                     menu.displayIP(ip);
                 }
@@ -123,7 +122,20 @@ public class PingController {
             }
         }
     }
-
+    /**
+     * Enum for switch
+     */
+    private enum Flags {
+        PING_FLAG("-p"),
+        TIMEOUT_FLAG("-t"),
+        LIST_FLAG("-l"),
+        HELP_FLAG("-h"),
+        MULTITHREADING_FLAG("-m");
+        private final String flag;
+        public Flags(String flag){
+            this.flag = flag;
+        }
+}
     /**
      * Method generating all IPs of a subnet.
      *
@@ -131,8 +143,8 @@ public class PingController {
      */
     private ArrayList<IPv4Address> getSubnetIPs(IPv4Address address) {
         ArrayList<IPv4Address> addressList = new ArrayList<>();
-        int count = (int) Math.pow(2, 32 - address.getMask());
-        int prefix = address.getRawIP() & 0xFFFFFFFF << (32 - address.getMask());
+        int count = (int) Math.pow(IPv4Address.BINARY_BASE, IPv4Address.IPv4_BITS - address.getMask());
+        int prefix = address.getRawIP() & 0xFFFFFFFF << (IPv4Address.IPv4_BITS - address.getMask());
         for (int i = 0; i < count; i++) {
             addressList.add(new IPv4Address(prefix | i, address.getMask()));
         }
@@ -159,17 +171,17 @@ public class PingController {
         switch (args.length) {
             case 1:
                 if (args.length > 0) {
-                    switch (args[0]) {
-                        case "-h":
+                    switch (Flags(args[0])) {
+                        case Flags.HELP_FLAG:
                             menu.renderHelp();
                             break;
-                        case "-l":
+                        case Flags.LIST_FLAG:
                             menu.renderInterfaces(this.ips);
                             break;
-                        case "-p":
+                        case Flags.PING_FLAG:
                             this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
                             break;
-                        case "-m":
+                        case Flags.MULTITHREADING_FLAG:
                             this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, true);
                         default:
                             menu.renderArgsError();
@@ -252,12 +264,11 @@ public class PingController {
                         } catch (NumberFormatException e) {
                             menu.renderException(e);
                         }
-                    }
-                    else{
+                    } else {
                         menu.renderArgsError();
                     }
                 }
-            break;
+                break;
             default:
                 menu.renderArgsError();
         }
@@ -280,6 +291,7 @@ public class PingController {
         Integer ipCounter = 0;
         // Check if params were supplied
         try {
+            menu.renderInit(this.ips.get(i));
             for (IPv4Address value : this.getSubnetIPs(this.ips.get(i))) {
                 if (multihreading) {
                     if (threadCounter < PingController.MAX_THREADS) {
@@ -297,15 +309,16 @@ public class PingController {
                         }
                     }
                 } else {
-                    final IcmpPingRequest request = IcmpPingUtil.createIcmpPingRequest();
-                    request.setHost(value.toString());
-                    request.setTimeout(sec);
-                    final IcmpPingResponse response = IcmpPingUtil.executePingRequest(request);
-                    if (response.getSuccessFlag()) {
-                        menu.displayIP(value);
+                    try {
+                        if (value.isReachable(sec, multihreading)) {
+                            menu.displayIP(value);
+                        }
+                    } catch (IOException e) {
+                        menu.renderException(e);
                     }
                 }
             }
+            menu.renderEnd(ipCounter);
         } catch (IndexOutOfBoundsException e) {
             menu.renderException(e);
         }

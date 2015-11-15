@@ -6,7 +6,8 @@ import pingMyNetwork.model.IPv4Address;
 /**
  *
  * @author Jakub Suchan
- * @version %I%
+ * @version     %I%, %G%
+ * @since       1.0
  */
 public class ConsoleOutput {
 
@@ -17,7 +18,7 @@ public class ConsoleOutput {
     public void renderInterfaces(ArrayList<IPv4Address> interfaces) {
 
         for(IPv4Address value:interfaces)
-        System.out.println(value.toString());
+            System.out.println(value.toString());
     }
     
     /**
@@ -46,6 +47,13 @@ public class ConsoleOutput {
         System.out.println("Invalid arguments! Use -h for help");
     }
     
+    public void renderInit(IPv4Address ip){
+        System.out.println("Starting discovery using: " + ip.toString());
+    }
+    
+    public void renderEnd(int result){
+        System.out.println("Discovery finished. Finds: " + result);
+    }
     /**
      *
      * @param e Exception to be logged

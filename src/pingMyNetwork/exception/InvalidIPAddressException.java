@@ -8,7 +8,8 @@ package pingMyNetwork.exception;
 /**
  *
  * @author Jakub Suchan
- * @version %I%
+ * @version     %I%, %G%
+ * @since       1.0
  */
 public class InvalidIPAddressException extends Exception{
     
