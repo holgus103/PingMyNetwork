@@ -9,12 +9,13 @@ import pingMyNetwork.model.IPv4Address;
  * @version     %I%, %G%
  * @since       1.0
  */
-public class ConsoleOutput {
+public class ConsoleOutput implements ViewInterface{
 
     /**
      * Displays a list of IPs
      * @param interfaces to display in the console
      */
+    @Override
     public void renderInterfaces(ArrayList<IPv4Address> interfaces) {
 
         for(IPv4Address value:interfaces)
@@ -25,12 +26,14 @@ public class ConsoleOutput {
      * Renders the IP address provided in the view
      * @param ip IP to be rendered
      */
+    @Override
     public void displayIP(IPv4Address ip){
         System.out.println(ip.toString());
     }
     /**
      *  Renders the help instructions 
      */
+    @Override
     public void renderHelp(){
         System.out.println("SYNTAX: -l | -p | -h [interface] [-t | -m] ");
         System.out.println("-l : lists all available interfaces");
@@ -51,6 +54,7 @@ public class ConsoleOutput {
      *
      * @param ip IP to be displayed
      */
+    @Override
     public void renderInit(IPv4Address ip){
         System.out.println("Starting discovery using: " + ip.toString());
     }
@@ -59,6 +63,7 @@ public class ConsoleOutput {
      *
      * @param result result to be displayed
      */
+    @Override
     public void renderEnd(int result){
         System.out.println("Discovery finished. Finds: " + result);
     }
@@ -66,6 +71,7 @@ public class ConsoleOutput {
      *
      * @param e Exception to be logged
      */
+    @Override
     public void renderException(Throwable e){
         System.out.println(e.getMessage());
     }

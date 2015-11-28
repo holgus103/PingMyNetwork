@@ -11,6 +11,7 @@ import java.util.List;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
+import pingMyNetwork.enums.Flags;
 
 /**
  *
@@ -102,38 +103,6 @@ public class PingController {
             }
         }
     }
-    /**
-     * @author Jakub Suchan
-     * @version %I%, %G%
-     * @since 1.0
-     * Enum storing different flags
-     */
-    private enum Flags {
-        PING_FLAG("-p"),
-        TIMEOUT_FLAG("-t"),
-        LIST_FLAG("-l"),
-        HELP_FLAG("-h"),
-        MULTITHREADING_FLAG("-m"),
-        ERROR_FLAG("-e");
-        private final String flag;
-        Flags(String flag){
-            this.flag = flag;
-        }
-        public static Flags getEnum(String flag){
-            switch(flag){
-                case "-p": return PING_FLAG;
-                case "-l": return LIST_FLAG;
-                case "-h": return HELP_FLAG;
-                case "-m": return MULTITHREADING_FLAG;
-                case "-t": return TIMEOUT_FLAG;
-                default:
-                    return ERROR_FLAG;
-            }
-        }
-        public boolean isEqual(String flag){
-            return this.flag.equals(flag);
-        }
-}
     /**
      * Method generating all IPs of a subnet.
      *
@@ -347,4 +316,8 @@ public class PingController {
         }
         return validIPs;
     }
+    
+//    public void actionList(){
+//        this.menu
+//    }
 }
