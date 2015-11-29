@@ -1,5 +1,7 @@
 package pingMyNetwork.controller;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InterfaceAddress;
@@ -8,6 +10,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import jdk.nashorn.internal.runtime.regexp.joni.ast.ConsAltNode;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
@@ -44,7 +47,7 @@ public class PingController {
     /**
      * Reference to this controllers view
      */
-    private final ConsoleOutput menu;
+    private ViewInterface menu;
     /**
      * Array of current machine's IPs
      */
@@ -103,6 +106,7 @@ public class PingController {
             }
         }
     }
+
     /**
      * Method generating all IPs of a subnet.
      *
@@ -123,7 +127,7 @@ public class PingController {
      * creates a view object.
      */
     public PingController() {
-        this.menu = new ConsoleOutput();
+        //this.menu = new ConsoleOutput();
         this.ips = this.getLocalIPs();
         this.threads = new Thread[PingController.MAX_THREADS];
     }
@@ -135,109 +139,119 @@ public class PingController {
      * @param args
      */
     public void run(String[] args) {
-        switch (args.length) {
-            case 1:
-                if (args.length > 0) {
-                    switch (Flags.getEnum(args[0])) {
-                        case HELP_FLAG:
-                            menu.renderHelp();
-                            break;
-                        case LIST_FLAG:
-                            menu.renderInterfaces(this.ips);
-                            break;
-                        case PING_FLAG:
-                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                            break;
-                        case MULTITHREADING_FLAG:
-                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, true);
-                        default:
-                            menu.renderArgsError();
+        if (args.length == 0) {
+            this.menu = new MainWindow(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    actions(e);
+                }
+            });
+        } else {
+            this.menu = new ConsoleOutput();
+            switch (args.length) {
+                case 1:
+                    if (args.length > 0) {
+                        switch (Flags.getEnum(args[0])) {
+                            case HELP_FLAG:
+                                menu.renderHelp();
+                                break;
+                            case LIST_FLAG:
+                                menu.renderInterfaces(this.ips);
+                                break;
+                            case PING_FLAG:
+                                this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                                break;
+                            case MULTITHREADING_FLAG:
+                                this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, true);
+                            default:
+                                menu.renderArgsError();
 
-                    }
-                }
-                break;
-            case 2:
-                if (Flags.PING_FLAG.isEqual(args[0])) {
-                    if (Flags.MULTITHREADING_FLAG.isEqual(args[1])) {
-                        this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                    } else {
-                        try {
-                            this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                        } catch (NumberFormatException e) {
-                            menu.renderException(e);
                         }
                     }
-                } else {
-                    menu.renderArgsError();
-                }
-                break;
-            case 3:
-                if (Flags.PING_FLAG.isEqual(args[0])) {
-                    if (Flags.TIMEOUT_FLAG.isEqual(args[1])) {
-                        try {
-                            this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[1]), PingController.DEFAULT_MULTITHREADING);
-                        } catch (NumberFormatException e) {
-                            menu.renderException(e);
-                        }
-                    } else {
-                        if (Flags.MULTITHREADING_FLAG.isEqual(args[2])) {
+                    break;
+                case 2:
+                    if (Flags.PING_FLAG.isEqual(args[0])) {
+                        if (Flags.MULTITHREADING_FLAG.isEqual(args[1])) {
+                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                        } else {
                             try {
-                                this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, true);
+                                this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
                             } catch (NumberFormatException e) {
                                 menu.renderException(e);
                             }
-                        } else {
-                            menu.renderArgsError();
-                        }
-                    }
-                } else {
-                    menu.renderArgsError();
-                }
-                break;
-            case 4:
-                if (Flags.PING_FLAG.isEqual(args[0])) {
-                    if (Flags.TIMEOUT_FLAG.isEqual(args[1]) && Flags.MULTITHREADING_FLAG.isEqual(args[3])) {
-                        try {
-                            this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[2]), true);
-                        } catch (NumberFormatException e) {
-                            menu.renderException(e);
-                        }
-                    } else {
-                        if (Flags.TIMEOUT_FLAG.isEqual(args[2])) {
-                            try {
-                                this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), PingController.DEFAULT_MULTITHREADING);
-                            } catch (NumberFormatException e) {
-                                menu.renderException(e);
-                            }
-                        } else {
-                            menu.renderArgsError();
-                        }
-                    }
-                } else {
-                    menu.renderArgsError();
-                }
-                break;
-            case 5:
-                if (Flags.PING_FLAG.isEqual(args[0]) && Flags.TIMEOUT_FLAG.isEqual(args[2]) && Flags.MULTITHREADING_FLAG.isEqual(args[4])) {
-                    try {
-                        this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), true);
-                    } catch (NumberFormatException e) {
-                        menu.renderException(e);
-                    }
-                } else {
-                    if (Flags.PING_FLAG.isEqual(args[0]) && Flags.MULTITHREADING_FLAG.isEqual(args[2]) && Flags.TIMEOUT_FLAG.isEqual(args[3])) {
-                        try {
-                            this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[4]), true);
-                        } catch (NumberFormatException e) {
-                            menu.renderException(e);
                         }
                     } else {
                         menu.renderArgsError();
                     }
-                }
-                break;
-            default:
-                menu.renderArgsError();
+                    break;
+                case 3:
+                    if (Flags.PING_FLAG.isEqual(args[0])) {
+                        if (Flags.TIMEOUT_FLAG.isEqual(args[1])) {
+                            try {
+                                this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[1]), PingController.DEFAULT_MULTITHREADING);
+                            } catch (NumberFormatException e) {
+                                menu.renderException(e);
+                            }
+                        } else {
+                            if (Flags.MULTITHREADING_FLAG.isEqual(args[2])) {
+                                try {
+                                    this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, true);
+                                } catch (NumberFormatException e) {
+                                    menu.renderException(e);
+                                }
+                            } else {
+                                menu.renderArgsError();
+                            }
+                        }
+                    } else {
+                        menu.renderArgsError();
+                    }
+                    break;
+                case 4:
+                    if (Flags.PING_FLAG.isEqual(args[0])) {
+                        if (Flags.TIMEOUT_FLAG.isEqual(args[1]) && Flags.MULTITHREADING_FLAG.isEqual(args[3])) {
+                            try {
+                                this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[2]), true);
+                            } catch (NumberFormatException e) {
+                                menu.renderException(e);
+                            }
+                        } else {
+                            if (Flags.TIMEOUT_FLAG.isEqual(args[2])) {
+                                try {
+                                    this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), PingController.DEFAULT_MULTITHREADING);
+                                } catch (NumberFormatException e) {
+                                    menu.renderException(e);
+                                }
+                            } else {
+                                menu.renderArgsError();
+                            }
+                        }
+                    } else {
+                        menu.renderArgsError();
+                    }
+                    break;
+                case 5:
+                    if (Flags.PING_FLAG.isEqual(args[0]) && Flags.TIMEOUT_FLAG.isEqual(args[2]) && Flags.MULTITHREADING_FLAG.isEqual(args[4])) {
+                        try {
+                            this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), true);
+                        } catch (NumberFormatException e) {
+                            menu.renderException(e);
+                        }
+                    } else {
+                        if (Flags.PING_FLAG.isEqual(args[0]) && Flags.MULTITHREADING_FLAG.isEqual(args[2]) && Flags.TIMEOUT_FLAG.isEqual(args[3])) {
+                            try {
+                                this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[4]), true);
+                            } catch (NumberFormatException e) {
+                                menu.renderException(e);
+                            }
+                        } else {
+                            menu.renderArgsError();
+                        }
+                    }
+                    break;
+                default:
+                    menu.renderArgsError();
+            }
         }
     }
 
@@ -252,7 +266,7 @@ public class PingController {
      * @param multihreading determines whether multithreading is enabled or not
      * @return count of all found IPs
      */
-    public int ping(int i, int sec, boolean multihreading) {
+    private int ping(int i, int sec, boolean multihreading) {
         // Default parameters 
         int threadCounter = 0;
         Integer ipCounter = 0;
@@ -298,7 +312,7 @@ public class PingController {
      *
      * @return machine's IPs
      */
-    public ArrayList<IPv4Address> getLocalIPs() {
+    private ArrayList<IPv4Address> getLocalIPs() {
         ArrayList<IPv4Address> validIPs = new ArrayList<>();
         try {
             Enumeration<NetworkInterface> netInts = NetworkInterface.getNetworkInterfaces();
@@ -316,8 +330,17 @@ public class PingController {
         }
         return validIPs;
     }
-    
-//    public void actionList(){
-//        this.menu
-//    }
+
+    //ActionListeners
+
+    private void actions(ActionEvent e) {
+        Flags command = Flags.valueOf(e.getActionCommand());
+        switch (command) {
+            case LIST_FLAG:
+                this.menu.renderInterfaces(ips);
+                break;
+            default:
+
+        }
+    }
 }

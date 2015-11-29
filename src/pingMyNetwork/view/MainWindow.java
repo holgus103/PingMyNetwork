@@ -18,7 +18,10 @@ import pingMyNetwork.enums.Flags;
  * @author Lab
  */
 public class MainWindow implements ViewInterface {
-
+    private JTree ipTree;
+    private ActionListener menuListener;
+    private JFrame frame;
+        
     @Override
     public void renderInterfaces(ArrayList<IPv4Address> ips) {
         DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
@@ -52,26 +55,25 @@ public class MainWindow implements ViewInterface {
     public void renderException(Throwable e) {
         JOptionPane.showMessageDialog(null, "Error", e.getMessage(), JOptionPane.ERROR_MESSAGE);
     }
-
-    private JTree ipTree;
     
-    private static void createAndShowGUI() {
-        JFrame frame = new JFrame("PingMyNetwork");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        MainWindow win = new MainWindow();
-        JComponent component = (JComponent) frame.getContentPane();
+    @Override
+    public void renderArgsError() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    private void createAndShowGUI() {
+        this.frame = new JFrame("PingMyNetwork");
+        this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JComponent component = (JComponent) this.frame.getContentPane();
         component.setLayout(new BoxLayout(component, BoxLayout.Y_AXIS));
-        component.add(win.buildMenuBar());
-        component.add(win.buildToolBar());
-        component.add(win.buildTree());
-//        frame.setJMenuBar(win.buildMenuBar());
-//        frame.add(win.buildToolBar());
-//        frame.add(win.buildTree());
-        frame.pack();
-        frame.setVisible(true);
+        component.add(this.buildMenuBar());
+        component.add(this.buildToolBar());
+        component.add(this.buildTree());
+        this.frame.pack();
+        this.frame.setVisible(true);
     }
 
-    public static void main(String[] args) {
+    private void main() {
           try {
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (UnsupportedLookAndFeelException ex) {
@@ -91,35 +93,32 @@ public class MainWindow implements ViewInterface {
     }
 
     private JMenuBar buildMenuBar() {
-        //Create and set up the window.
-
-        //Add the ubiquitous "Hello World" label.
-        JMenuBar menuBar = new JMenuBar();
+        JMenuBar commandMenu = new JMenuBar();
         JMenu commandsMenu = new JMenu("Commands");
 
         JMenuItem item = new JMenuItem("List IPs");
         item.setActionCommand(Flags.LIST_FLAG.name());
-//        item.addActionListener(this);
+        item.addActionListener(this.menuListener);
         commandsMenu.add(item);
 
         item = new JMenuItem("Help");
         item.setActionCommand(Flags.HELP_FLAG.name());
-//        item.addActionListener(this);
+        item.addActionListener(this.menuListener);
         commandsMenu.add(item);
 
         item = new JMenuItem("Ping");
         item.setActionCommand(Flags.PING_FLAG.name());
-//        item.addActionListener(this);
+        item.addActionListener(this.menuListener);
         
         commandsMenu.add(item);
 
         item = new JMenuItem("Exit");
-//        item.addActionListener(this);
+        item.addActionListener(this.menuListener);
         item.setActionCommand(Flags.EXIT_FLAG.name());
         commandsMenu.add(item);
 
-        menuBar.add(commandsMenu);
-        return menuBar;
+        commandMenu.add(commandsMenu);
+        return commandMenu;
         //Display the window.
     }
     private JPanel buildToolBar(){
@@ -127,11 +126,11 @@ public class MainWindow implements ViewInterface {
         
         JButton button = new JButton("List IP");
         button.setActionCommand(Flags.LIST_FLAG.name());
+        button.addActionListener(this.menuListener);
         commandsToolBar.add(button);
-        
         button = new JButton("Ping");
         button.setActionCommand(Flags.PING_FLAG.name());
-//        button.addActionListener(this);
+        button.addActionListener(this.menuListener);
         commandsToolBar.add(button);
         
         JPanel toolBarPanel = new JPanel();
@@ -146,6 +145,10 @@ public class MainWindow implements ViewInterface {
         JPanel treePanel = new JPanel();
         treePanel.add(this.ipTree);
         return treePanel;
+    }
+    public MainWindow(ActionListener listener){
+        this.menuListener = listener;
+        this.main();
     }
     
 }

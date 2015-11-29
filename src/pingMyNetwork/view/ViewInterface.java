@@ -19,4 +19,5 @@ public interface ViewInterface {
     public void renderInit(IPv4Address ip);
     public void renderEnd(int result);
     public void renderException(Throwable e);
+    public void renderArgsError();
 }
