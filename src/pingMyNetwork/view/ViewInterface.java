@@ -20,4 +20,5 @@ public interface ViewInterface {
     public void renderEnd(int result);
     public void renderException(Throwable e);
     public void renderArgsError();
+    public void exit();
 }

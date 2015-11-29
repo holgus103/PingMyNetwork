@@ -75,4 +75,9 @@ public class ConsoleOutput implements ViewInterface{
     public void renderException(Throwable e){
         System.out.println(e.getMessage());
     }
+
+    @Override
+    public void exit() {
+        
+    }
 }

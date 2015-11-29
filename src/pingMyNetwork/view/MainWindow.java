@@ -38,29 +38,32 @@ public class MainWindow implements ViewInterface {
 
     @Override
     public void renderHelp() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        JOptionPane.showMessageDialog(null, "This application also proviced it's CLI, run with -h for more information!","Help", JOptionPane.INFORMATION_MESSAGE);
     }
 
     @Override
     public void renderInit(IPv4Address ip) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
     }
 
     @Override
     public void renderEnd(int result) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
     }
 
     @Override
     public void renderException(Throwable e) {
-        JOptionPane.showMessageDialog(null, "Error", e.getMessage(), JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(null, e.getMessage(), "Error",JOptionPane.ERROR_MESSAGE);
     }
     
     @Override
     public void renderArgsError() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        JOptionPane.showMessageDialog(null, "Invalid arguments", "Error", JOptionPane.ERROR_MESSAGE);
     }
-    
+    @Override
+    public void exit() {
+        System.exit(0);
+    }
     private void createAndShowGUI() {
         this.frame = new JFrame("PingMyNetwork");
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -150,5 +153,6 @@ public class MainWindow implements ViewInterface {
         this.menuListener = listener;
         this.main();
     }
+
     
 }

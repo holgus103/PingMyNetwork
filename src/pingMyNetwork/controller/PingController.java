@@ -10,7 +10,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import jdk.nashorn.internal.runtime.regexp.joni.ast.ConsAltNode;
+import javax.swing.event.TreeSelectionEvent;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
@@ -52,7 +52,10 @@ public class PingController {
      * Array of current machine's IPs
      */
     private final ArrayList<IPv4Address> ips;
-
+    /**
+     * Selected interface
+     */
+    private int currentInterfaceId;
     /**
      * Private class used for pinging asynchronously
      *
@@ -339,8 +342,20 @@ public class PingController {
             case LIST_FLAG:
                 this.menu.renderInterfaces(ips);
                 break;
+            case PING_FLAG:
+                this.ping(this.currentInterfaceId, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                break;
+            case HELP_FLAG:
+                this.menu.renderHelp();
+                break;
+            case EXIT_FLAG:
+                this.menu.exit();
+                
             default:
 
         }
+    }
+    private void selectInterface(TreeSelectionEvent e){
+        
     }
 }
