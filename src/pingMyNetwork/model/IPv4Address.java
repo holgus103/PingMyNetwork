@@ -140,17 +140,12 @@ public class IPv4Address {
      * @return whether or not a IP is reachable
      * @throws java.io.IOException
      */
-    public boolean isReachable(int timeout, boolean multithreading) throws IOException, IllegalAccessError {
-        if (multithreading) {
-            return InetAddress.getByName(this.toString()).isReachable(timeout);
-        } 
-        else {
+    public boolean isReachable(int timeout) throws IOException, IllegalAccessError {
             final IcmpPingRequest request = IcmpPingUtil.createIcmpPingRequest();
             request.setHost(this.toString());
             request.setTimeout(timeout);
             final IcmpPingResponse response = IcmpPingUtil.executePingRequest(request);
             return response.getSuccessFlag();
-        }
 
     }
 

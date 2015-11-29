@@ -10,7 +10,11 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JTree;
+import javax.swing.SwingWorker;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import pingMyNetwork.exception.InvalidIPAddressException;
@@ -27,10 +31,6 @@ import pingMyNetwork.enums.Flags;
 public class PingController {
 
     /**
-     * The maximum number of threads used for network discovery
-     */
-    private static final int MAX_THREADS = 8;
-    /**
      * The default interface used for pinging
      */
     private static final int DEFAULT_INTERFACE = 0;
@@ -38,14 +38,7 @@ public class PingController {
      * The default timeout used for pinging
      */
     private static final int DEFAULT_TIMEOUT = 1000;
-    /**
-     * Multithreading is disabled by default as it causes problems on Windows
-     */
-    private static final boolean DEFAULT_MULTITHREADING = false;
-    /**
-     * Array of references to the above mentioned threads
-     */
-    private final Thread[] threads;
+
     /**
      * Reference to this controllers view
      */
@@ -53,11 +46,24 @@ public class PingController {
     /**
      * Array of current machine's IPs
      */
-    private final ArrayList<IPv4Address> ips;
+    private ArrayList<IPv4Address> ips;
     /**
      * Selected interface
      */
     private int currentInterfaceId;
+    /**
+     * Subnet IPs
+     */
+    private List<IPv4Address> ipsLeft = new ArrayList<>();
+    /**
+     * Blocks multiple discoveries at a time
+     */
+    private boolean isDiscoveryRunning;
+    /**
+     * Is this a CLI session
+     */
+    private boolean isCLISession;
+
     /**
      * Private class used for pinging asynchronously
      *
@@ -65,9 +71,10 @@ public class PingController {
      * @version %I%, %G%
      * @since 1.0
      */
-    private class PingIP extends Thread {
+    private class Worker extends SwingWorker<IPv4Address, Void> {
 
         // Private properties
+
         /**
          * The IP this thread is going to ping
          */
@@ -82,32 +89,53 @@ public class PingController {
         private Integer ipCounter;
 
         /**
-         * Thread constructor
+         * Worker constructor
          *
-         * @param ip IP the thread is going to ping
-         * @param timeout pinging timeout
-         * @param ipCounter counter of discovered IPs
+         * @param ip IP to ping
+         * @param t timeout
+         * @param ipCounter Counter to be incremented
          */
-        PingIP(IPv4Address ip, int timeout, Integer ipCounter) {
+        public Worker(IPv4Address ip, int t, Integer ipCounter) {
             this.ip = ip;
-            this.timeout = timeout;
+            this.timeout = t;
             this.ipCounter = ipCounter;
         }
 
         /**
-         * Thread's main method that checks for IP availability. If the current
-         * IP is found online the global counter will be increased and the IP
-         * address rendered in the view right away.
+         * Method for background pinging
+         *
+         * @return IP that was being pinged
+         * @throws Exception
          */
         @Override
-        public void run() {
+        public IPv4Address doInBackground() throws Exception {
+            if (this.ip.isReachable(this.timeout)) {
+                return this.ip;
+            } else {
+                return null;
+            }
+        }
+
+        /**
+         * Methods to execute after doInBackground has ended
+         */
+        @Override
+        public void done() {
             try {
-                if (ip.isReachable(timeout, true)) {
-                    this.ipCounter++;
+                IPv4Address ip = this.get();
+                if (ip != null) {
                     menu.displayIP(ip);
                 }
-            } catch (IOException e) {
-                menu.renderException(e);
+                if (ipsLeft.size() > 0) {
+                    nextIp(this.timeout, this.ipCounter);
+                } else {
+                    isDiscoveryRunning = false;
+                    menu.renderEnd(this.ipCounter);
+                }
+            } catch (InterruptedException ex) {
+                Logger.getLogger(PingController.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(PingController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -128,13 +156,48 @@ public class PingController {
     }
 
     /**
+     * Method for action handling
+     *
+     * @param e ActionEvent to be handled
+     */
+    private void actions(ActionEvent e) {
+        Flags command = Flags.valueOf(e.getActionCommand());
+        switch (command) {
+            case LIST_FLAG:
+                this.menu.renderInterfaces(ips);
+                break;
+            case PING_FLAG:
+                if (!this.isDiscoveryRunning) {
+                    this.ping(this.currentInterfaceId, PingController.DEFAULT_TIMEOUT);
+                }
+                break;
+            case HELP_FLAG:
+                this.menu.renderHelp();
+                break;
+            case EXIT_FLAG:
+                this.menu.exit();
+
+            default:
+
+        }
+    }
+
+    /**
+     * Updates the pinging interface
+     *
+     * @param e
+     */
+    private void selectInterface(TreeSelectionEvent e) {
+        this.currentInterfaceId = ((JTree) e.getSource()).getMinSelectionRow() - 1;
+    }
+
+    /**
      * The constructor initializes the array of references to threads and
      * creates a view object.
      */
     public PingController() {
         //this.menu = new ConsoleOutput();
         this.ips = this.getLocalIPs();
-        this.threads = new Thread[PingController.MAX_THREADS];
     }
 
     /**
@@ -145,20 +208,22 @@ public class PingController {
      */
     public void run(String[] args) {
         if (args.length == 0) {
+            this.isCLISession = false;
             this.menu = new MainWindow(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     actions(e);
                 }
-            }
-            , 
-            new TreeSelectionListener(){
-                @Override
-                public void valueChanged(TreeSelectionEvent e){
-                    selectInterface(e);
-                }
-            });
+            },
+                    new TreeSelectionListener() {
+                        @Override
+                        public void valueChanged(TreeSelectionEvent e) {
+                            selectInterface(e);
+                        }
+                    });
+            this.menu.main();
         } else {
+            this.isCLISession = true;
             this.menu = new ConsoleOutput();
             switch (args.length) {
                 case 1:
@@ -171,10 +236,8 @@ public class PingController {
                                 menu.renderInterfaces(this.ips);
                                 break;
                             case PING_FLAG:
-                                this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
+                                this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT);
                                 break;
-                            case MULTITHREADING_FLAG:
-                                this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, true);
                             default:
                                 menu.renderArgsError();
 
@@ -183,14 +246,10 @@ public class PingController {
                     break;
                 case 2:
                     if (Flags.PING_FLAG.isEqual(args[0])) {
-                        if (Flags.MULTITHREADING_FLAG.isEqual(args[1])) {
-                            this.ping(PingController.DEFAULT_INTERFACE, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                        } else {
-                            try {
-                                this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                            } catch (NumberFormatException e) {
-                                menu.renderException(e);
-                            }
+                        try {
+                            this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT);
+                        } catch (NumberFormatException e) {
+                            menu.renderException(e);
                         }
                     } else {
                         menu.renderArgsError();
@@ -200,19 +259,9 @@ public class PingController {
                     if (Flags.PING_FLAG.isEqual(args[0])) {
                         if (Flags.TIMEOUT_FLAG.isEqual(args[1])) {
                             try {
-                                this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[1]), PingController.DEFAULT_MULTITHREADING);
+                                this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[1]));
                             } catch (NumberFormatException e) {
                                 menu.renderException(e);
-                            }
-                        } else {
-                            if (Flags.MULTITHREADING_FLAG.isEqual(args[2])) {
-                                try {
-                                    this.ping(Integer.parseInt(args[1]), PingController.DEFAULT_TIMEOUT, true);
-                                } catch (NumberFormatException e) {
-                                    menu.renderException(e);
-                                }
-                            } else {
-                                menu.renderArgsError();
                             }
                         }
                     } else {
@@ -221,44 +270,18 @@ public class PingController {
                     break;
                 case 4:
                     if (Flags.PING_FLAG.isEqual(args[0])) {
-                        if (Flags.TIMEOUT_FLAG.isEqual(args[1]) && Flags.MULTITHREADING_FLAG.isEqual(args[3])) {
+                        if (Flags.TIMEOUT_FLAG.isEqual(args[2])) {
                             try {
-                                this.ping(PingController.DEFAULT_INTERFACE, Integer.parseInt(args[2]), true);
-                            } catch (NumberFormatException e) {
-                                menu.renderException(e);
-                            }
-                        } else {
-                            if (Flags.TIMEOUT_FLAG.isEqual(args[2])) {
-                                try {
-                                    this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), PingController.DEFAULT_MULTITHREADING);
-                                } catch (NumberFormatException e) {
-                                    menu.renderException(e);
-                                }
-                            } else {
-                                menu.renderArgsError();
-                            }
-                        }
-                    } else {
-                        menu.renderArgsError();
-                    }
-                    break;
-                case 5:
-                    if (Flags.PING_FLAG.isEqual(args[0]) && Flags.TIMEOUT_FLAG.isEqual(args[2]) && Flags.MULTITHREADING_FLAG.isEqual(args[4])) {
-                        try {
-                            this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]), true);
-                        } catch (NumberFormatException e) {
-                            menu.renderException(e);
-                        }
-                    } else {
-                        if (Flags.PING_FLAG.isEqual(args[0]) && Flags.MULTITHREADING_FLAG.isEqual(args[2]) && Flags.TIMEOUT_FLAG.isEqual(args[3])) {
-                            try {
-                                this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[4]), true);
+                                this.ping(Integer.parseInt(args[1]), Integer.parseInt(args[3]));
                             } catch (NumberFormatException e) {
                                 menu.renderException(e);
                             }
                         } else {
                             menu.renderArgsError();
                         }
+
+                    } else {
+                        menu.renderArgsError();
                     }
                     break;
                 default:
@@ -268,54 +291,51 @@ public class PingController {
     }
 
     /**
+     * Initializes the pinging of the next free IP address
+     *
+     * @param timeout timeout
+     * @param ipCounter Counter to be incremented
+     */
+    private void nextIp(int timeout, Integer ipCounter) {
+        if (ipsLeft.size() > 0) {
+            IPv4Address ip = ipsLeft.remove(0);
+            new Worker(ip, timeout, ipCounter).execute();
+        }
+    }
+
+    /**
      * Method exploring the network and pining all subnet IPs, the IPs that are
      * found online will be displayer in real-time in the view that's been
      * initialized within this class as menu. By default the method will use the
-     * first interface and a timeout of1000 ms.
+     * first interface and a timeout of 1000 ms.
      *
      * @param i no of the interface used for pinging
      * @param sec pinging timeout
-     * @param multihreading determines whether multithreading is enabled or not
-     * @return count of all found IPs
      */
-    private int ping(int i, int sec, boolean multihreading) {
-        // Default parameters 
-        int threadCounter = 0;
-        Integer ipCounter = 0;
-        // Check if params were supplied
-        try {
-            menu.renderInit(this.ips.get(i));
+    private void ping(int i, int sec) {
+        this.isDiscoveryRunning = true;
+        Integer ipCounter = 0; 
+        menu.renderInit(this.ips.get(i));
+        if (!this.isCLISession) {
+            try {
+                ipsLeft = this.getSubnetIPs(this.ips.get(i));
+                nextIp(sec, ipCounter);
+            } catch (IndexOutOfBoundsException e) {
+                menu.renderException(e);
+            }
+        } else {
             for (IPv4Address value : this.getSubnetIPs(this.ips.get(i))) {
-                if (multihreading) {
-                    if (threadCounter < PingController.MAX_THREADS) {
-                        this.threads[threadCounter] = new PingIP(value, sec, ipCounter);
-                        this.threads[threadCounter].start();
-                        threadCounter++;
-                    } else {
-                        threadCounter = 0;
-                        for (Thread worker : this.threads) {
-                            try {
-                                worker.join();
-                            } catch (InterruptedException e) {
-                                menu.renderException(e);
-                            }
-                        }
+                try {
+                    if (value.isReachable(sec)) {
+                        menu.displayIP(value);
+                        ipCounter++;
                     }
-                } else {
-                    try {
-                        if (value.isReachable(sec, multihreading)) {
-                            menu.displayIP(value);
-                        }
-                    } catch (IOException e) {
-                        menu.renderException(e);
-                    }
+                } catch (IOException e) {
+                    menu.renderException(e);
                 }
             }
             menu.renderEnd(ipCounter);
-        } catch (IndexOutOfBoundsException e) {
-            menu.renderException(e);
         }
-        return ipCounter;
 
     }
 
@@ -341,30 +361,5 @@ public class PingController {
             menu.renderException(e);
         }
         return validIPs;
-    }
-
-    //ActionListeners
-
-    private void actions(ActionEvent e) {
-        Flags command = Flags.valueOf(e.getActionCommand());
-        switch (command) {
-            case LIST_FLAG:
-                this.menu.renderInterfaces(ips);
-                break;
-            case PING_FLAG:
-                this.ping(this.currentInterfaceId, PingController.DEFAULT_TIMEOUT, PingController.DEFAULT_MULTITHREADING);
-                break;
-            case HELP_FLAG:
-                this.menu.renderHelp();
-                break;
-            case EXIT_FLAG:
-                this.menu.exit();
-                
-            default:
-
-        }
-    }
-    private void selectInterface(TreeSelectionEvent e){
-        this.currentInterfaceId = ((JTree)e.getSource()).getMinSelectionRow() -1;
     }
 }

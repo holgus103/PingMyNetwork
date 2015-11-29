@@ -53,29 +53,29 @@ public class IPv4AddressTest {
         }
     }
 
-    /**
-     *
+    /** 
+     * Tests the isReachable method
      */
     @Test
     public void testIsReachable(){
         try{
             this.address = new IPv4Address(this.LOOPBACK);
-            assertTrue(this.address.isReachable(1000, false));
+            assertTrue(this.address.isReachable(1000));
         }
         catch(IndexOutOfBoundsException |InvalidIPAddressException |NumberFormatException |IOException
                 |IllegalAccessError e){
         }
         
         try{
-            this.address = new IPv4Address(GOOGLE_DNS);
-            assertTrue(this.address.isReachable(1000, false));
+            this.address = new IPv4Address(this.GOOGLE_DNS);
+            assertTrue(this.address.isReachable(1000));
         }
         catch(IndexOutOfBoundsException |InvalidIPAddressException |NumberFormatException |IOException
                 |IllegalAccessError e){
         }
         try{
-            this.address = new IPv4Address(RESCRICTED_IP);
-            assertFalse(this.address.isReachable(1000, false));
+            this.address = new IPv4Address(this.RESCRICTED_IP);
+            assertFalse(this.address.isReachable(1000));
         }
         catch(IndexOutOfBoundsException |InvalidIPAddressException |NumberFormatException |IOException
                 |IllegalAccessError e){

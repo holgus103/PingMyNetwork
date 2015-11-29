@@ -35,7 +35,7 @@ public class ConsoleOutput implements ViewInterface{
      */
     @Override
     public void renderHelp(){
-        System.out.println("SYNTAX: -l | -p | -h [interface] [-t | -m] ");
+        System.out.println("SYNTAX: -l | -p | -h [interface] [-t] [timeout]");
         System.out.println("-l : lists all available interfaces");
         System.out.println("-t : sets timeout for network discovery");
         System.out.println("-h : displays help");
@@ -51,7 +51,7 @@ public class ConsoleOutput implements ViewInterface{
     }
     
     /**
-     *
+     * 
      * @param ip IP to be displayed
      */
     @Override
@@ -76,8 +76,19 @@ public class ConsoleOutput implements ViewInterface{
         System.out.println(e.getMessage());
     }
 
+    /**
+     * Exits
+     */
     @Override
     public void exit() {
+        
+    }
+    
+    /**
+     * Main view method
+     */
+    @Override
+    public void main(){
         
     }
 }

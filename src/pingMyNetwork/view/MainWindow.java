@@ -12,74 +12,140 @@ import java.util.ArrayList;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 import pingMyNetwork.model.IPv4Address;
 import pingMyNetwork.enums.Flags;
-
 /**
  *
- * @author Lab
+ * @author Jakub Suchan
+ * @version %I%, %G%
+ * @since 1.0
  */
 public class MainWindow implements ViewInterface {
+    /**
+     * View's JTree for displaying IPs
+     */
     private JTree ipTree;
+    /**
+     * Actionlistener to be added to the buttons
+     */
     private ActionListener menuListener;
+    /**
+     * TheSelectionListener to change the Interface ID
+     */
     private TreeSelectionListener treeListener;
+    /**
+     * Main JFrame of the view
+     */
     private JFrame frame;
+    /**
+     * Views TabbedPane
+     */
+    private JTabbedPane tabPane;
+    /**
+     * Boolean value for JTree refreshing
+     */
+    private boolean isShowingInterfaces;
         
+    /**
+     * Displays all interfaces
+     * @param ips Interfaces to be displayed
+     */
     @Override
     public void renderInterfaces(ArrayList<IPv4Address> ips) {
+        this.isShowingInterfaces = true;
         DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
+        root.removeAllChildren();
         for(IPv4Address value: ips){
             root.add(new DefaultMutableTreeNode(value.toString()));
         }
     }
 
+    /**
+     * Displays a single IP in the view
+     * @param ip IP to be displayed
+     */
     @Override
     public void displayIP(IPv4Address ip) {
+        if(this.isShowingInterfaces){
+            DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
+            root.removeAllChildren();
+            this.isShowingInterfaces = false;
+        }
         DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
         root.add(new DefaultMutableTreeNode(ip.toString()));
+        ((DefaultTreeModel)this.ipTree.getModel()).reload(root);
     }
 
+     /**
+     * Displays help
+     */
     @Override
     public void renderHelp() {
         JOptionPane.showMessageDialog(null, "This application also proviced it's CLI, run with -h for more information!","Help", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Shows discovery results
+     * @param ip
+     */
     @Override
     public void renderInit(IPv4Address ip) {
-        
+        JOptionPane.showMessageDialog(null, "Scanning network","Discovery started", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Displays pinging initialization message
+     * @param result
+     */
     @Override
     public void renderEnd(int result) {
-        
+        JOptionPane.showMessageDialog(null, result + " IPs found!","REsults", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Displays an exception
+     * @param e
+     */
     @Override
     public void renderException(Throwable e) {
         JOptionPane.showMessageDialog(null, e.getMessage(), "Error",JOptionPane.ERROR_MESSAGE);
     }
     
+    /**
+     * Displays an arguments error
+     */
     @Override
     public void renderArgsError() {
         JOptionPane.showMessageDialog(null, "Invalid arguments", "Error", JOptionPane.ERROR_MESSAGE);
     }
+
+    /**
+     * Exits the view
+     */
     @Override
     public void exit() {
         System.exit(0);
     }
+    /**
+     * Creates and displays the GUI
+     */
     private void createAndShowGUI() {
         this.frame = new JFrame("PingMyNetwork");
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JComponent component = (JComponent) this.frame.getContentPane();
         component.setLayout(new BoxLayout(component, BoxLayout.Y_AXIS));
-        component.add(this.buildMenuBar());
+        this.frame.setJMenuBar(this.buildMenuBar());
         component.add(this.buildToolBar());
-        component.add(this.buildTree());
+        component.add(this.buildTabs());
         this.frame.pack();
         this.frame.setVisible(true);
     }
 
-    private void main() {
+    /**
+     * Main view method
+     */
+    public void main() {
           try {
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (UnsupportedLookAndFeelException ex) {
@@ -97,7 +163,10 @@ public class MainWindow implements ViewInterface {
             }
         });
     }
-
+    /**
+     * Builds the menu bad
+     * @return New menu bar
+     */
     private JMenuBar buildMenuBar() {
         JMenuBar commandMenu = new JMenuBar();
         JMenu commandsMenu = new JMenu("Commands");
@@ -125,8 +194,11 @@ public class MainWindow implements ViewInterface {
 
         commandMenu.add(commandsMenu);
         return commandMenu;
-        //Display the window.
     }
+    /**
+     * Builds tool bar
+     * @return New tool bar
+     */
     private JPanel buildToolBar(){
         JToolBar commandsToolBar = new JToolBar();
         
@@ -143,7 +215,10 @@ public class MainWindow implements ViewInterface {
         toolBarPanel.add(commandsToolBar);
         return toolBarPanel;
     }
-    
+    /**
+     * Builds a new tree
+     * @return New tree
+     */
     private JPanel buildTree(){
         DefaultMutableTreeNode top =
         new DefaultMutableTreeNode("IP");
@@ -153,10 +228,25 @@ public class MainWindow implements ViewInterface {
         treePanel.add(this.ipTree);
         return treePanel;
     }
+    /**
+     * Builds the tabbed pane
+     * @return New tabbed pane
+     */
+    private JTabbedPane buildTabs(){
+        this.tabPane = new JTabbedPane();
+        this.tabPane.add("IPs",this.buildTree());
+        return this.tabPane;
+    }
+
+    /**
+     * Creates a new window
+     * @param listener ActionListener for the buttons
+     * @param treeListener TreeSelectionListener that changes the interface ID
+     */
     public MainWindow(ActionListener listener, TreeSelectionListener treeListener){
         this.treeListener = treeListener;
         this.menuListener = listener;
-        this.main();
+        this.isShowingInterfaces = false;
     }
 
     

@@ -3,4 +3,6 @@ nbproject/
 build/
 manifest.mf
 build.xml
-/dist/
+dist/
+javadoc/
+bin/
