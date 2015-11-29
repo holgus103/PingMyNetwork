@@ -9,6 +9,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import pingMyNetwork.model.IPv4Address;
 import pingMyNetwork.enums.Flags;
@@ -20,6 +22,7 @@ import pingMyNetwork.enums.Flags;
 public class MainWindow implements ViewInterface {
     private JTree ipTree;
     private ActionListener menuListener;
+    private TreeSelectionListener treeListener;
     private JFrame frame;
         
     @Override
@@ -145,11 +148,13 @@ public class MainWindow implements ViewInterface {
         DefaultMutableTreeNode top =
         new DefaultMutableTreeNode("IP");
         this.ipTree = new JTree(top);
+        this.ipTree.addTreeSelectionListener(this.treeListener);
         JPanel treePanel = new JPanel();
         treePanel.add(this.ipTree);
         return treePanel;
     }
-    public MainWindow(ActionListener listener){
+    public MainWindow(ActionListener listener, TreeSelectionListener treeListener){
+        this.treeListener = treeListener;
         this.menuListener = listener;
         this.main();
     }

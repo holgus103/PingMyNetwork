@@ -10,7 +10,9 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
 import pingMyNetwork.view.*;
@@ -147,6 +149,13 @@ public class PingController {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     actions(e);
+                }
+            }
+            , 
+            new TreeSelectionListener(){
+                @Override
+                public void valueChanged(TreeSelectionEvent e){
+                    selectInterface(e);
                 }
             });
         } else {
@@ -356,6 +365,6 @@ public class PingController {
         }
     }
     private void selectInterface(TreeSelectionEvent e){
-        
+        this.currentInterfaceId = ((JTree)e.getSource()).getMinSelectionRow() -1;
     }
 }

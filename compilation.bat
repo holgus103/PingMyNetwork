@@ -1,2 +1,0 @@
-javac .\src\pingMyNetwork\PingMyNetwork.java .\src\pingMyNetwork\view\ConsoleOutput.java .\src\pingMyNetwork\model\IPv4Address.java .\src\pingMyNetwork\exception\InvalidIPAddressException .\src\pingMyNetwork\model\PingController.java
-pause
