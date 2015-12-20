@@ -1,6 +1,6 @@
 package pingMyNetwork;
 
-import pingMyNetwork.controller.PingController;
+import pingMyNetwork.controller.ClientController;
 
 /**
  *
@@ -8,15 +8,15 @@ import pingMyNetwork.controller.PingController;
  * @version     %I%, %G%
  * @since       1.0
  */
-public class PingMyNetwork {
+public class Client {
     
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
 
-        PingController pinger = new PingController();
-        pinger.run(args);
+        ClientController controller = new ClientController();
+        controller.run(args);
     }
 
 }

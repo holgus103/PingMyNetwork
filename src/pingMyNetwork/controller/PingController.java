@@ -1,13 +1,10 @@
 package pingMyNetwork.controller;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Inet4Address;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -20,14 +17,10 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.JTree;
 import javax.swing.SwingWorker;
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
+import pingMyNetwork.enums.Flags;
 import pingMyNetwork.exception.InvalidIPAddressException;
 import pingMyNetwork.model.*;
-import pingMyNetwork.view.*;
-import pingMyNetwork.enums.Flags;
 
 /**
  *
@@ -36,32 +29,22 @@ import pingMyNetwork.enums.Flags;
  * @since 1.0
  */
 public class PingController {
-
+    
+    private static final int PORT = 9999;
     /**
-     * The default interface used for pinging
+     * Blocks multiple discoveries at a time
      */
-    private static final int DEFAULT_INTERFACE = 0;
-    /**
-     * The default timeout used for pinging
-     */
-    private static final int DEFAULT_TIMEOUT = 1000;
-
+    private boolean isDiscoveryRunning;
+    private long lastRefresh;
     /**
      * Array of current machine's IPs
      */
     private ArrayList<IPv4Address> ips;
     /**
-     * Selected interface
-     */
-    private int currentInterfaceId;
-    /**
      * Subnet IPs
      */
     private List<IPv4Address> ipsLeft = new ArrayList<>();
-    /**
-     * Blocks multiple discoveries at a time
-     */
-    private boolean isDiscoveryRunning;
+    private List<IPv4Address> onlineIPs = new ArrayList<>();
     /**
      * ServerSocket for accepting clients
      */
@@ -74,14 +57,28 @@ public class PingController {
      * @version %I%, %G%
      * @since 1.0
      */
-    private class SingleService extends SwingWorker<String, Void> {
+    private class SingleService extends SwingWorker<Void, Void> {
 
         /**
          *
          */
+        private static final int handShakeVal = 13378888;
         private Socket clientSocket;
-        private BufferedReader in;
-        private PrintWriter out;
+        private ObjectInputStream in;
+        private ObjectOutputStream out;
+        
+        private boolean handShake() {
+            try {
+                this.out.writeInt(SingleService.handShakeVal);
+                this.out.flush();
+                if (SingleService.handShakeVal == this.in.readInt()) {
+                    return true;
+                }
+                return false;
+            } catch (IOException e) {
+                return false;
+            }
+        }
 
         /**
          * The constructor of instance of the SingleService class. Use the
@@ -91,23 +88,70 @@ public class PingController {
          */
         public SingleService(Socket socket) throws IOException {
             this.clientSocket = socket;
-            out = new PrintWriter(
-                    new BufferedWriter(
-                            new OutputStreamWriter(
-                                    socket.getOutputStream())), true);
-            in = new BufferedReader(
-                    new InputStreamReader(
-                            socket.getInputStream()));
-        }   
+            this.out = new ObjectOutputStream(new BufferedOutputStream(this.clientSocket.getOutputStream()));
+            this.out.flush();
+            this.in = new ObjectInputStream(new BufferedInputStream(this.clientSocket.getInputStream()));
+        }
+        
         @Override
         public void done() {
             super.done(); //To change body of generated methods, choose Tools | Templates.
         }
+        
         @Override
-        public String doInBackground(){
-            return "asd";
+        public Void doInBackground() {
+            boolean isOnline = true;
+            while (isOnline) {
+                try {
+                    String command = this.in.readUTF();
+                    Flags f = Flags.valueOf(command);
+                    switch (f) {
+                        case LIST_FLAG:
+                            if (this.handShake()) {
+                                this.out.writeObject(ips);
+                                this.out.flush();
+                            } else {
+                                isOnline = false;
+                            }
+                            break;
+                        case PING_FLAG:
+                            if (!this.handShake()) {
+                                isOnline = false;
+                                break;
+                            }
+                            if (((lastRefresh == 0 || lastRefresh - System.currentTimeMillis() / 1000L > 10000)) && !isDiscoveryRunning) {
+                                isDiscoveryRunning = true;
+                                int id = in.readInt();
+                                int timeout = in.readInt();
+                                ping(id, timeout, this.out);
+                            } else {
+                                while (isDiscoveryRunning) {
+                                    try {
+                                        Thread.sleep(1000);
+                                    } catch (InterruptedException e) {
+                                        
+                                    }
+                                    
+                                }
+                            }
+                            this.out.writeObject(onlineIPs);
+                            this.out.flush();
+                        case EXIT_FLAG:
+                            if (this.handShake()) {
+                                isOnline = false;
+                            } else {
+                                isOnline = false;
+                            }
+                            break;
+                        
+                    }
+                } catch (IOException e) {
+                    logException(e);
+                }
+            }
+            return null;
         }
-
+        
     }
 
     /**
@@ -132,6 +176,7 @@ public class PingController {
          * Counter used to determine the amount of discovered IPs
          */
         private Integer ipCounter;
+        private ObjectOutputStream out;
 
         /**
          * Worker constructor
@@ -140,7 +185,8 @@ public class PingController {
          * @param t timeout
          * @param ipCounter Counter to be incremented
          */
-        public Worker(IPv4Address ip, int t, Integer ipCounter) {
+        public Worker(IPv4Address ip, int t, Integer ipCounter, ObjectOutputStream out) {
+            this.out = out;
             this.ip = ip;
             this.timeout = t;
             this.ipCounter = ipCounter;
@@ -169,18 +215,28 @@ public class PingController {
             try {
                 IPv4Address ip = this.get();
                 if (ip != null) {
-//                    menu.displayIP(ip);
+                    try {
+                        out.writeObject(ip);
+                        out.flush();
+                    } catch (IOException e) {
+                        logException(e);
+                    }
+                    onlineIPs.add(ip);
                 }
                 if (ipsLeft.size() > 0) {
-                    nextIp(this.timeout, this.ipCounter);
+                    nextIp(this.timeout, this.ipCounter, out);
                 } else {
+                    try {
+                        out.writeObject(null);
+                        out.flush();
+                    } catch (IOException e) {
+                        logException(e);
+                    }
                     isDiscoveryRunning = false;
-//                    menu.renderEnd(this.ipCounter);
+                    lastRefresh = System.currentTimeMillis() / 1000L;
                 }
-            } catch (InterruptedException ex) {
-                Logger.getLogger(PingController.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (ExecutionException ex) {
-                Logger.getLogger(PingController.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException | ExecutionException ex) {
+                logException(ex);
             }
         }
     }
@@ -205,7 +261,6 @@ public class PingController {
      * creates a view object.
      */
     public PingController() {
-        //this.menu = new ConsoleOutput();
         this.ips = this.getLocalIPs();
     }
 
@@ -215,11 +270,24 @@ public class PingController {
      * @param timeout timeout
      * @param ipCounter Counter to be incremented
      */
-    private void nextIp(int timeout, Integer ipCounter) {
+    private void nextIp(int timeout, Integer ipCounter, ObjectOutputStream out) {
         if (ipsLeft.size() > 0) {
             IPv4Address ip = ipsLeft.remove(0);
-            new Worker(ip, timeout, ipCounter).execute();
+            new Worker(ip, timeout, ipCounter, out).execute();
         }
+    }
+
+    /**
+     *
+     *
+     * @throws java.io.IOException
+     */
+    public void run() throws IOException {
+        ServerSocket server = new ServerSocket(PingController.PORT);
+        while (true) {
+            new SingleService(server.accept()).execute();
+        }
+        
     }
 
     /**
@@ -231,31 +299,16 @@ public class PingController {
      * @param i no of the interface used for pinging
      * @param sec pinging timeout
      */
-    private void ping(int i, int sec) {
+    private void ping(int i, int sec, ObjectOutputStream out) {
         this.isDiscoveryRunning = true;
         Integer ipCounter = 0;
-        menu.renderInit(this.ips.get(i));
-        if (!this.isCLISession) {
-            try {
-                ipsLeft = this.getSubnetIPs(this.ips.get(i));
-                nextIp(sec, ipCounter);
-            } catch (IndexOutOfBoundsException e) {
-                menu.renderException(e);
-            }
-        } else {
-            for (IPv4Address value : this.getSubnetIPs(this.ips.get(i))) {
-                try {
-                    if (value.isReachable(sec)) {
-                        menu.displayIP(value);
-                        ipCounter++;
-                    }
-                } catch (IOException e) {
-                    menu.renderException(e);
-                }
-            }
-            menu.renderEnd(ipCounter);
+        try {
+            ipsLeft = this.getSubnetIPs(this.ips.get(i));
+            nextIp(sec, ipCounter, out);
+        } catch (IndexOutOfBoundsException e) {
+            this.logException(e);
         }
-
+        
     }
 
     /**
@@ -277,8 +330,12 @@ public class PingController {
                 }
             }
         } catch (SocketException | NumberFormatException | IndexOutOfBoundsException | InvalidIPAddressException e) {
-            menu.renderException(e);
+            this.logException(e);
         }
         return validIPs;
+    }
+    
+    private void logException(Throwable e) {
+        Logger.getLogger(PingController.class.getName()).log(Level.SEVERE, null, e);
     }
 }

@@ -1,6 +1,7 @@
 
 package pingMyNetwork;
 
+import java.io.IOException;
 import pingMyNetwork.controller.PingController;
 
 /**
@@ -16,6 +17,11 @@ public class Server {
     public static void main(String[] args) {
 
         PingController pinger = new PingController();
-        pinger.run(args);
+        try{
+            pinger.run();
+        }
+        catch(IOException e){
+            System.out.println("Failed to run");
+        }
     }
 }

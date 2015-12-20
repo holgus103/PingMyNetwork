@@ -1,6 +1,7 @@
 package pingMyNetwork.model;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import org.icmp4j.IcmpPingRequest;
 import org.icmp4j.IcmpPingResponse;
@@ -13,7 +14,7 @@ import pingMyNetwork.exception.InvalidIPAddressException;
  * @version %I%, %G%
  * @since 1.0
  */
-public class IPv4Address {
+public class IPv4Address implements Serializable{
 
     // Private members
     // Constants

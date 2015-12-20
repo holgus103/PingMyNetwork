@@ -134,6 +134,7 @@ public class MainWindow implements ViewInterface {
         this.frame = new JFrame("PingMyNetwork");
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JComponent component = (JComponent) this.frame.getContentPane();
+        this.frame.setPreferredSize(new Dimension(800,600));
         component.setLayout(new BoxLayout(component, BoxLayout.Y_AXIS));
         this.frame.setJMenuBar(this.buildMenuBar());
         component.add(this.buildToolBar());
