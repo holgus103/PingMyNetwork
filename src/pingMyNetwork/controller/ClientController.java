@@ -18,6 +18,8 @@ import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import pingMyNetwork.enums.Flags;
+import pingMyNetwork.exception.InvalidIPAddressException;
+import pingMyNetwork.exception.InvalidServerResponseException;
 import pingMyNetwork.model.IPv4Address;
 import pingMyNetwork.view.ConsoleOutput;
 import pingMyNetwork.view.MainWindow;
@@ -27,8 +29,7 @@ import pingMyNetwork.view.ViewInterface;
  *
  * @author Administrator
  */
-public class ClientController {
-    private static final int handShakeVal = 13378888;
+public class ClientController implements ControllerConst{
     private static final String localhost = "127.0.0.1"; 
     private static final int PORT = 9999;
     /**
@@ -42,7 +43,7 @@ public class ClientController {
      /**
      * Selected interface
      */
-    private int currentInterfaceId;
+    private String currentInterface;
     /**
      * Blocks multiple discoveries at a time
      */
@@ -173,7 +174,7 @@ public class ClientController {
                 break;
             case PING_FLAG:
                 if (!this.isDiscoveryRunning) {
-                    this.getOnlineIPs(this.currentInterfaceId,ClientController.DEFAULT_TIMEOUT);
+                    this.getOnlineIPs(0,ClientController.DEFAULT_TIMEOUT);
                 }
                 break;
             case HELP_FLAG:
@@ -194,7 +195,7 @@ public class ClientController {
      * @param e
      */
     private void selectInterface(TreeSelectionEvent e) {
-        this.currentInterfaceId = ((JTree) e.getSource()).getMinSelectionRow() - 1;
+        this.currentInterface = ((JTree) e.getSource()).getSelectionRows().toString();
     }
    
     private ArrayList<IPv4Address> getInterfaces(){
@@ -203,9 +204,9 @@ public class ClientController {
         this.outObj.flush();
         if(!this.handShake())
             return null;
-        return (ArrayList < IPv4Address >) inObj.readObject();
+        return (ArrayList < IPv4Address >) this.receiveResponse();
         }
-        catch(IOException | ClassNotFoundException e){
+        catch(IOException | InvalidServerResponseException e){
             this.menu.renderException(e);
             return null;
         }
@@ -214,7 +215,7 @@ public class ClientController {
     private boolean handShake(){
         try{
             if(ClientController.handShakeVal == this.inObj.readInt()){
-                this.outObj.writeInt(ClientController.handShakeVal);
+                this.outObj.writeInt(ControllerConst.handShakeVal);
                 this.outObj.flush();
                 return true;
             }
@@ -232,17 +233,22 @@ public class ClientController {
         this.outObj.flush();
         if(!this.handShake())
             return false;
-        this.outObj.writeInt(id);
+        this.outObj.writeObject(new IPv4Address(this.currentInterface));
         this.outObj.writeInt(timeout);
         this.outObj.flush();
-        new Thread(new Runnable(){
+        new Thread(){
             @Override
             public void run(){
                 try{
-                    IPv4Address temp; 
+                    Object temp; 
                     do{
-                        temp = (IPv4Address)inObj.readObject();
-                        menu.displayIP(temp);
+                        
+                        temp = inObj.readObject();
+                        if(temp!=null)
+                            for(IPv4Address value: (ArrayList<IPv4Address>)(temp)){
+                                menu.displayIP(value);
+                            }
+//                        menu.displayIP(((ArrayList<IPv4Address>)(temp)));
                     }
                     while(temp!= null);
                 }
@@ -250,10 +256,10 @@ public class ClientController {
                     menu.renderException(e);
                 }
             } 
-        }).start();
+        }.start();
         return true;
         }
-        catch(IOException e){
+        catch(IOException | IndexOutOfBoundsException | InvalidIPAddressException e){
             this.menu.renderException(e);
         }
         return false;
@@ -270,6 +276,28 @@ public class ClientController {
         }
     }
     
+    private Object receiveResponse() throws InvalidServerResponseException{
+        try{
+        switch(this.inObj.readInt()){
+            case ControllerConst.successVal:
+                return this.inObj.readObject();
+            case ControllerConst.failureVal:
+                Throwable e = (Throwable)this.inObj.readObject();
+                this.menu.renderException(e);
+                return e;
+            default:
+                throw new InvalidServerResponseException("The server response is invalid");
+        }
+        }
+        catch(IOException | ClassNotFoundException e){
+            this.menu.renderException(e);
+        }
+        return null;
+    }
+    
+    private boolean sendCommand(Flags cmd){
+        return true;
+    }
     private boolean connect(){
         try{
         this.socket = new Socket(ClientController.localhost,ClientController.PORT);
