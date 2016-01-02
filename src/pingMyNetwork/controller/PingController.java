@@ -76,15 +76,11 @@ public class PingController implements ControllerConst {
                 onlineIPs.add(new IPv4Address("192.168.18.100"));
                 this.sendResponse(onlineIPs.get(0), isDiscoveryRunning);
                 onlineIPs.add(new IPv4Address("192.168.18.102"));
-//            out.writeObject(onlineIPs.get(0));
-//            out.flush();
                 this.sendResponse(onlineIPs.get(1), true);
-//            for(IPv4Address val:getSubnectIPs()){
-//                if(val.isReachable(timeout)){
+//            for(IPv4Address val:getSubnetIPs(ip)){
+//                if(val.isReachable(sec)){
 //                    onlineIPs.add(val);
-//                    out.writeObject(val);
-//                    out.flush();
-//                    this.ipCounter++;
+//                    this.sendResponse(val, true);
 //                }
 //            }
                 this.sendResponse(null, true);
@@ -171,8 +167,12 @@ public class PingController implements ControllerConst {
                                     }
 
                                 }
-                                this.sendResponse(onlineIPs, true);
+                                for(IPv4Address val: onlineIPs){
+                                    this.sendResponse(val, true);
+                                }
+                                this.sendResponse(null, true);
                             }
+                            break;
                         case EXIT_FLAG:
                             isOnline = false;
                             break;

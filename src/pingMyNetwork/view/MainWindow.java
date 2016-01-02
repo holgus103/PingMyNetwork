@@ -5,12 +5,10 @@
  */
 package pingMyNetwork.view;
 
-import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
-import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
@@ -60,6 +58,7 @@ public class MainWindow implements ViewInterface {
         for(IPv4Address value: ips){
             root.add(new DefaultMutableTreeNode(value.toString()));
         }
+        ((DefaultTreeModel)this.ipTree.getModel()).reload(root);
     }
 
     /**
@@ -146,19 +145,15 @@ public class MainWindow implements ViewInterface {
     /**
      * Main view method
      */
+    @Override
     public void main() {
           try {
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (UnsupportedLookAndFeelException ex) {
-            ex.printStackTrace();
-        } catch (IllegalAccessException ex) {
-            ex.printStackTrace();
-        } catch (InstantiationException ex) {
-            ex.printStackTrace();
-        } catch (ClassNotFoundException ex) {
+        } catch (UnsupportedLookAndFeelException | IllegalAccessException | InstantiationException | ClassNotFoundException ex) {
             ex.printStackTrace();
         }
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 createAndShowGUI();
             }

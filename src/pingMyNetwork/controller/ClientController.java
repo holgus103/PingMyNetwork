@@ -73,8 +73,7 @@ public class ClientController implements ControllerConst{
         protected Void doInBackground() throws Exception {
             try{
                     IPv4Address temp; 
-                    do{
-                        
+                    do{                        
                         temp = (IPv4Address)receiveResponse();
                         if(temp!=null)
                         publish(temp);
@@ -89,7 +88,8 @@ public class ClientController implements ControllerConst{
         
         @Override
         protected void done(){
-              
+              super.done();
+              isDiscoveryRunning = false;
         }
         
         @Override
@@ -206,9 +206,7 @@ public class ClientController implements ControllerConst{
                 this.menu.renderInterfaces(this.getInterfaces());
                 break;
             case PING_FLAG:
-                if (!this.isDiscoveryRunning) {
                     this.getOnlineIPs(0,ClientController.DEFAULT_TIMEOUT);
-                }
                 break;
             case HELP_FLAG:
                 this.menu.renderHelp();
@@ -228,7 +226,10 @@ public class ClientController implements ControllerConst{
      * @param e
      */
     private void selectInterface(TreeSelectionEvent e) {
-        this.currentInterface = ((JTree) e.getSource()).getLastSelectedPathComponent().toString();
+        
+            Object selection = ((JTree) e.getSource()).getLastSelectedPathComponent();
+            if(selection!=null)
+            this.currentInterface = selection.toString();
     }
    
     private ArrayList<IPv4Address> getInterfaces(){
@@ -261,6 +262,10 @@ public class ClientController implements ControllerConst{
                 
     }
     private boolean getOnlineIPs(int id, int timeout){
+        if(this.isDiscoveryRunning){
+            return false;
+        }
+        this.isDiscoveryRunning = true;
         try{
         this.outObj.writeUTF(Flags.PING_FLAG.toString());
         this.outObj.flush();
