@@ -53,7 +53,6 @@ public class PingController implements ControllerConst {
         /**
          *
          */
-
         private Socket clientSocket;
         private ObjectInputStream in;
         private ObjectOutputStream out;
@@ -69,6 +68,33 @@ public class PingController implements ControllerConst {
             } catch (IOException e) {
                 return false;
             }
+        }
+
+        private void ping(IPv4Address ip, int sec) {
+            isDiscoveryRunning = true;
+            try {
+                onlineIPs.add(new IPv4Address("192.168.18.100"));
+                this.sendResponse(onlineIPs.get(0), isDiscoveryRunning);
+                onlineIPs.add(new IPv4Address("192.168.18.102"));
+//            out.writeObject(onlineIPs.get(0));
+//            out.flush();
+                this.sendResponse(onlineIPs.get(1), true);
+//            for(IPv4Address val:getSubnectIPs()){
+//                if(val.isReachable(timeout)){
+//                    onlineIPs.add(val);
+//                    out.writeObject(val);
+//                    out.flush();
+//                    this.ipCounter++;
+//                }
+//            }
+                this.sendResponse(null, true);
+            isDiscoveryRunning = false;
+            lastRefresh = System.currentTimeMillis() / 1000L;
+            } catch (IndexOutOfBoundsException | InvalidIPAddressException e) {
+                this.sendResponse(e, false);
+                logException(e);
+            }
+
         }
 
         public void sendResponse(Object obj, boolean success) {
@@ -100,7 +126,15 @@ public class PingController implements ControllerConst {
 
         @Override
         public void done() {
-            super.done(); //To change body of generated methods, choose Tools | Templates.
+            super.done();
+            try{
+            this.out.close();
+            this.in.close();
+            this.clientSocket.close();
+            }
+            catch(IOException e){
+                logException(e);
+            }
         }
 
         @Override
@@ -110,29 +144,24 @@ public class PingController implements ControllerConst {
                 try {
                     String command = this.in.readUTF();
                     Flags f = Flags.valueOf(command);
+                    if (!this.handShake()) {
+                        isOnline = false;
+                        break;
+                    }
                     switch (f) {
                         case LIST_FLAG:
-                            if (this.handShake()) {
-                                try{
-                                   this.sendResponse(getLocalIPs(), true);
-                                }
-                                catch(IndexOutOfBoundsException | InvalidIPAddressException |SocketException e){
-                                    this.sendResponse(e, false);
-                                }
-                            } else {
-                                isOnline = false;
+                            try {
+                                this.sendResponse(getLocalIPs(), true);
+                            } catch (IndexOutOfBoundsException | InvalidIPAddressException | SocketException e) {
+                                this.sendResponse(e, false);
                             }
                             break;
                         case PING_FLAG:
-                            if (!this.handShake()) {
-                                isOnline = false;
-                                break;
-                            }
                             if (((lastRefresh == 0 || lastRefresh - System.currentTimeMillis() / 1000L > 10000)) && !isDiscoveryRunning) {
                                 isDiscoveryRunning = true;
-                                IPv4Address ip = (IPv4Address)in.readObject();
+                                IPv4Address ip = (IPv4Address) in.readObject();
                                 int timeout = in.readInt();
-                                ping(ip, timeout, this);
+                                this.ping(ip, timeout);
                             } else {
                                 while (isDiscoveryRunning) {
                                     try {
@@ -145,11 +174,7 @@ public class PingController implements ControllerConst {
                                 this.sendResponse(onlineIPs, true);
                             }
                         case EXIT_FLAG:
-                            if (this.handShake()) {
-                                isOnline = false;
-                            } else {
-                                isOnline = false;
-                            }
+                            isOnline = false;
                             break;
 
                     }
@@ -162,78 +187,7 @@ public class PingController implements ControllerConst {
 
     }
 
-    /**
-     * Private class used for pinging asynchronously
-     *
-     * @author Jakub Suchan
-     * @version %I%, %G%
-     * @since 1.0
-     */
-    private class Worker extends SwingWorker<Void, Void> {
-
-        // Private properties
-        /**
-         * Ping timeout
-         */
-        private final int timeout;
-        /**
-         * Counter used to determine the amount of discovered IPs
-         */
-        private SingleService parent;
-        private Integer ipCounter;
-        private final ArrayList<IPv4Address> ips;
-
-        /**
-         * Worker constructor
-         *
-         * @param ip IP to ping
-         * @param t timeout
-         * @param ipCounter Counter to be incremented
-         */
-        public Worker(IPv4Address ip, int t, SingleService parent) {
-            this.parent = parent;
-            this.ips = getSubnetIPs(ip);
-            this.timeout = t;
-            this.ipCounter = 0;
-        }
-
-        /**
-         * Method for background pinging
-         *
-         * @return IP that was being pinged
-         * @throws Exception
-         */
-        @Override
-        public Void doInBackground() throws Exception {
-            onlineIPs.add(new IPv4Address("192.168.18.100"));
-            onlineIPs.add(new IPv4Address("192.168.18.102"));
-//            out.writeObject(onlineIPs.get(0));
-//            out.flush();
-            this.ipCounter++;
-            this.parent.sendResponse(onlineIPs, true);
-            this.ipCounter++;
-//            for(IPv4Address val:this.ips){
-//                if(val.isReachable(timeout)){
-//                    onlineIPs.add(val);
-//                    out.writeObject(val);
-//                    out.flush();
-//                    this.ipCounter++;
-//                }
-//            }
-            this.parent.sendResponse(null, true);
-            return null;
-        }
-
-        /**
-         * Methods to execute after doInBackground has ended
-         */
-        @Override
-        public void done() {
-            this.parent.sendResponse(this.ipCounter, true);
-            isDiscoveryRunning = false;
-            lastRefresh = System.currentTimeMillis() / 1000L;
-        }
-    }
+ 
 
     /**
      * Method generating all IPs of a subnet.
@@ -250,7 +204,6 @@ public class PingController implements ControllerConst {
         return addressList;
     }
 
-
     /**
      *
      *
@@ -265,42 +218,22 @@ public class PingController implements ControllerConst {
     }
 
     /**
-     * Method exploring the network and pining all subnet IPs, the IPs that are
-     * found online will be displayer in real-time in the view that's been
-     * initialized within this class as menu. By default the method will use the
-     * first interface and a timeout of 1000 ms.
-     *
-     * @param i no of the interface used for pinging
-     * @param sec pinging timeout
-     */
-    private void ping(IPv4Address ip, int sec, SingleService parent) {
-        this.isDiscoveryRunning = true;
-        try {
-            new Worker(ip, sec, parent).execute();
-        } catch (IndexOutOfBoundsException e) {
-            parent.sendResponse(e, false);
-            this.logException(e);
-        }
-
-    }
-
-    /**
      * Method fetching all IPs of the current machine
      *
      * @return machine's IPs
      */
     private ArrayList<IPv4Address> getLocalIPs() throws SocketException, IndexOutOfBoundsException, InvalidIPAddressException {
         ArrayList<IPv4Address> validIPs = new ArrayList<>();
-            Enumeration<NetworkInterface> netInts = NetworkInterface.getNetworkInterfaces();
-            while (netInts.hasMoreElements()) {
-                List<InterfaceAddress> intAddrs = netInts.nextElement().getInterfaceAddresses();
-                for (InterfaceAddress value : intAddrs) {
-                    // Check if IP is IPv4 or loopback
-                    if (value.getAddress() instanceof Inet4Address && !value.getAddress().isLoopbackAddress()) {
-                        validIPs.add(new IPv4Address(value.getAddress().toString(), value.getNetworkPrefixLength()));
-                    }
+        Enumeration<NetworkInterface> netInts = NetworkInterface.getNetworkInterfaces();
+        while (netInts.hasMoreElements()) {
+            List<InterfaceAddress> intAddrs = netInts.nextElement().getInterfaceAddresses();
+            for (InterfaceAddress value : intAddrs) {
+                // Check if IP is IPv4 or loopback
+                if (value.getAddress() instanceof Inet4Address && !value.getAddress().isLoopbackAddress()) {
+                    validIPs.add(new IPv4Address(value.getAddress().toString(), value.getNetworkPrefixLength()));
                 }
             }
+        }
         return validIPs;
     }
 

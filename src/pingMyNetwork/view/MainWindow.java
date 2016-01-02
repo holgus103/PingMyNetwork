@@ -5,6 +5,7 @@
  */
 package pingMyNetwork.view;
 
+import com.sun.org.apache.xml.internal.resolver.helpers.Debug;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -67,12 +68,11 @@ public class MainWindow implements ViewInterface {
      */
     @Override
     public void displayIP(IPv4Address ip) {
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
         if(this.isShowingInterfaces){
-            DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
             root.removeAllChildren();
             this.isShowingInterfaces = false;
         }
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode)this.ipTree.getModel().getRoot();
         root.add(new DefaultMutableTreeNode(ip.toString()));
         ((DefaultTreeModel)this.ipTree.getModel()).reload(root);
     }

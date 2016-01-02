@@ -2,7 +2,6 @@ package pingMyNetwork.model;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.InetAddress;
 import org.icmp4j.IcmpPingRequest;
 import org.icmp4j.IcmpPingResponse;
 import org.icmp4j.IcmpPingUtil;

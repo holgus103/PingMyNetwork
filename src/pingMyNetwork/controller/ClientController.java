@@ -14,7 +14,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JTree;
+import javax.swing.SwingWorker;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import pingMyNetwork.enums.Flags;
@@ -65,10 +67,41 @@ public class ClientController implements ControllerConst{
      */
     private ObjectOutputStream outObj;
 
-    public ClientController() {
+    private class AsynchUpdates extends SwingWorker<Void,IPv4Address>{
+
+        @Override
+        protected Void doInBackground() throws Exception {
+            try{
+                    IPv4Address temp; 
+                    do{
+                        
+                        temp = (IPv4Address)receiveResponse();
+                        if(temp!=null)
+                        publish(temp);
+                    }
+                    while(temp!= null);
+                }
+                catch(ClassCastException | InvalidServerResponseException e){
+                    menu.renderException(e);
+                }
+            return null;
+        }
         
-    }
+        @Override
+        protected void done(){
+              
+        }
+        
+        @Override
+        protected void process(List<IPv4Address> ips){
+            for(IPv4Address value:ips){
+                    menu.displayIP(value);
+            }
+        }
+        
     
+    }
+      
     /**
      * Main method of the controller that analyzes user input and fires up the
      * corresponding methods.
@@ -195,7 +228,7 @@ public class ClientController implements ControllerConst{
      * @param e
      */
     private void selectInterface(TreeSelectionEvent e) {
-        this.currentInterface = ((JTree) e.getSource()).getSelectionRows().toString();
+        this.currentInterface = ((JTree) e.getSource()).getLastSelectedPathComponent().toString();
     }
    
     private ArrayList<IPv4Address> getInterfaces(){
@@ -236,27 +269,7 @@ public class ClientController implements ControllerConst{
         this.outObj.writeObject(new IPv4Address(this.currentInterface));
         this.outObj.writeInt(timeout);
         this.outObj.flush();
-        new Thread(){
-            @Override
-            public void run(){
-                try{
-                    Object temp; 
-                    do{
-                        
-                        temp = inObj.readObject();
-                        if(temp!=null)
-                            for(IPv4Address value: (ArrayList<IPv4Address>)(temp)){
-                                menu.displayIP(value);
-                            }
-//                        menu.displayIP(((ArrayList<IPv4Address>)(temp)));
-                    }
-                    while(temp!= null);
-                }
-                catch(ClassNotFoundException | IOException | ClassCastException e){
-                    menu.renderException(e);
-                }
-            } 
-        }.start();
+        new AsynchUpdates().execute();
         return true;
         }
         catch(IOException | IndexOutOfBoundsException | InvalidIPAddressException e){
