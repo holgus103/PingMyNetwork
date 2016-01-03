@@ -33,6 +33,8 @@ public class MainWindow implements ViewInterface {
      * TheSelectionListener to change the Interface ID
      */
     private TreeSelectionListener treeListener;
+    
+    private WindowStateListener stateListener;
     /**
      * Main JFrame of the view
      */
@@ -131,6 +133,7 @@ public class MainWindow implements ViewInterface {
      */
     private void createAndShowGUI() {
         this.frame = new JFrame("PingMyNetwork");
+        this.frame.addWindowStateListener(this.stateListener);
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JComponent component = (JComponent) this.frame.getContentPane();
         this.frame.setPreferredSize(new Dimension(800,600));
@@ -141,7 +144,7 @@ public class MainWindow implements ViewInterface {
         this.frame.pack();
         this.frame.setVisible(true);
     }
-
+    
     /**
      * Main view method
      */
@@ -239,9 +242,10 @@ public class MainWindow implements ViewInterface {
      * @param listener ActionListener for the buttons
      * @param treeListener TreeSelectionListener that changes the interface ID
      */
-    public MainWindow(ActionListener listener, TreeSelectionListener treeListener){
+    public MainWindow(ActionListener listener, TreeSelectionListener treeListener, WindowStateListener stateListener){
         this.treeListener = treeListener;
         this.menuListener = listener;
+        this.stateListener = stateListener;
         this.isShowingInterfaces = false;
     }
 

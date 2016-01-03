@@ -7,6 +7,9 @@ package pingMyNetwork.controller;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.awt.event.WindowStateListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -31,8 +34,9 @@ import pingMyNetwork.view.ViewInterface;
  *
  * @author Administrator
  */
-public class ClientController implements ControllerConst{
-    private static final String localhost = "127.0.0.1"; 
+public class ClientController implements ControllerConst {
+
+    private static final String localhost = "127.0.0.1";
     private static final int PORT = 9999;
     /**
      * The default interface used for pinging
@@ -42,7 +46,7 @@ public class ClientController implements ControllerConst{
      * The default timeout used for pinging
      */
     private static final int DEFAULT_TIMEOUT = 1000;
-     /**
+    /**
      * Selected interface
      */
     private String currentInterface;
@@ -55,53 +59,51 @@ public class ClientController implements ControllerConst{
      */
     private ViewInterface menu;
     /**
-     * 
+     *
      */
     private Socket socket;
     /**
-     * 
+     *
      */
     private ObjectInputStream inObj;
     /**
-     * 
+     *
      */
     private ObjectOutputStream outObj;
 
-    private class AsynchUpdates extends SwingWorker<Void,IPv4Address>{
+    private class AsynchUpdates extends SwingWorker<Void, IPv4Address> {
 
         @Override
         protected Void doInBackground() throws Exception {
-            try{
-                    IPv4Address temp; 
-                    do{                        
-                        temp = (IPv4Address)receiveResponse();
-                        if(temp!=null)
+            try {
+                IPv4Address temp;
+                do {
+                    temp = (IPv4Address) receiveResponse();
+                    if (temp != null) {
                         publish(temp);
                     }
-                    while(temp!= null);
-                }
-                catch(ClassCastException | InvalidServerResponseException e){
-                    menu.renderException(e);
-                }
+                } while (temp != null);
+            } catch (ClassCastException | InvalidServerResponseException e) {
+                menu.renderException(e);
+            }
             return null;
         }
-        
+
         @Override
-        protected void done(){
-              super.done();
-              isDiscoveryRunning = false;
+        protected void done() {
+            super.done();
+            isDiscoveryRunning = false;
         }
-        
+
         @Override
-        protected void process(List<IPv4Address> ips){
-            for(IPv4Address value:ips){
-                    menu.displayIP(value);
+        protected void process(List<IPv4Address> ips) {
+            for (IPv4Address value : ips) {
+                menu.displayIP(value);
             }
         }
-        
-    
+
     }
-      
+
     /**
      * Main method of the controller that analyzes user input and fires up the
      * corresponding methods.
@@ -110,25 +112,34 @@ public class ClientController implements ControllerConst{
      */
     public void run(String[] args) {
         if (args.length == 0) {
-            this.menu = new MainWindow(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    actions(e);
-                }
-            },
+            this.menu = new MainWindow(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            actions(e);
+                        }
+                    },
                     new TreeSelectionListener() {
                         @Override
                         public void valueChanged(TreeSelectionEvent e) {
                             selectInterface(e);
+                        }
+                    },
+                    new WindowStateListener() {
+
+                        @Override
+                        public void windowStateChanged(WindowEvent e) {
+                            sendExitMessage();
                         }
                     });
             this.menu.main();
             this.connect();
         } else {
             this.menu = new ConsoleOutput();
-            if(!this.connect())
+            if (!this.connect()) {
                 return;
-            
+            }
+
             switch (args.length) {
                 case 1:
                     if (args.length > 0) {
@@ -191,6 +202,14 @@ public class ClientController implements ControllerConst{
                 default:
                     menu.renderArgsError();
             }
+            while (this.isDiscoveryRunning) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    menu.renderException(e);
+                }
+            }
+            this.sendExitMessage();
         }
     }
 
@@ -206,13 +225,13 @@ public class ClientController implements ControllerConst{
                 this.menu.renderInterfaces(this.getInterfaces());
                 break;
             case PING_FLAG:
-                    this.getOnlineIPs(0,ClientController.DEFAULT_TIMEOUT);
+                this.getOnlineIPs(-1, ClientController.DEFAULT_TIMEOUT);
                 break;
             case HELP_FLAG:
                 this.menu.renderHelp();
                 break;
             case EXIT_FLAG:
-                this.sentExitMessage();
+                this.sendExitMessage();
                 this.menu.exit();
 
             default:
@@ -226,107 +245,109 @@ public class ClientController implements ControllerConst{
      * @param e
      */
     private void selectInterface(TreeSelectionEvent e) {
-        
-            Object selection = ((JTree) e.getSource()).getLastSelectedPathComponent();
-            if(selection!=null)
+
+        Object selection = ((JTree) e.getSource()).getLastSelectedPathComponent();
+        if (selection != null) {
             this.currentInterface = selection.toString();
-    }
-   
-    private ArrayList<IPv4Address> getInterfaces(){
-        try{
-        this.outObj.writeUTF(Flags.LIST_FLAG.toString());
-        this.outObj.flush();
-        if(!this.handShake())
-            return null;
-        return (ArrayList < IPv4Address >) this.receiveResponse();
         }
-        catch(IOException | InvalidServerResponseException e){
+    }
+
+    private ArrayList<IPv4Address> getInterfaces() {
+        try {
+            this.outObj.writeUTF(Flags.LIST_FLAG.toString());
+            this.outObj.flush();
+            if (!this.handShake()) {
+                return null;
+            }
+            return (ArrayList< IPv4Address>) this.receiveResponse();
+        } catch (IOException | InvalidServerResponseException e) {
             this.menu.renderException(e);
             return null;
         }
     }
-    
-    private boolean handShake(){
-        try{
-            if(ClientController.handShakeVal == this.inObj.readInt()){
+
+    private boolean handShake() {
+        try {
+            if (ClientController.handShakeVal == this.inObj.readInt()) {
                 this.outObj.writeInt(ControllerConst.handShakeVal);
                 this.outObj.flush();
                 return true;
             }
             return false;
-        }
-        catch(IOException e){
+        } catch (IOException e) {
             this.menu.renderException(e);
             return false;
         }
-                
+
     }
-    private boolean getOnlineIPs(int id, int timeout){
-        if(this.isDiscoveryRunning){
+
+    private boolean getOnlineIPs(int id, int timeout) {
+        if (this.currentInterface == null) {
+            this.currentInterface = this.getInterfaces().get(id >= 0 ? id : 0).toString();
+        }
+        if (this.isDiscoveryRunning) {
             return false;
         }
         this.isDiscoveryRunning = true;
-        try{
-        this.outObj.writeUTF(Flags.PING_FLAG.toString());
-        this.outObj.flush();
-        if(!this.handShake())
-            return false;
-        this.outObj.writeObject(new IPv4Address(this.currentInterface));
-        this.outObj.writeInt(timeout);
-        this.outObj.flush();
-        new AsynchUpdates().execute();
-        return true;
-        }
-        catch(IOException | IndexOutOfBoundsException | InvalidIPAddressException e){
+        try {
+            this.outObj.writeUTF(Flags.PING_FLAG.toString());
+            this.outObj.flush();
+            if (!this.handShake()) {
+                return false;
+            }
+            this.outObj.writeObject(new IPv4Address(this.currentInterface));
+            this.outObj.writeInt(timeout);
+            this.outObj.flush();
+            new AsynchUpdates().execute();
+            return true;
+        } catch (IOException | IndexOutOfBoundsException | InvalidIPAddressException e) {
             this.menu.renderException(e);
         }
         return false;
     }
-    
-    private void sentExitMessage(){
-        try{
-          this.outObj.writeChars(Flags.EXIT_FLAG.toString());
-          this.outObj.flush();
-          this.handShake();
-        }
-        catch(IOException e){
+
+    private void sendExitMessage() {
+        try {
+            this.outObj.writeUTF(Flags.EXIT_FLAG.toString());
+            this.outObj.flush();
+            this.handShake();
+            this.outObj.close();
+            this.inObj.close();
+            this.socket.close();
+        } catch (IOException e) {
             this.menu.renderException(e);
         }
     }
-    
-    private Object receiveResponse() throws InvalidServerResponseException{
-        try{
-        switch(this.inObj.readInt()){
-            case ControllerConst.successVal:
-                return this.inObj.readObject();
-            case ControllerConst.failureVal:
-                Throwable e = (Throwable)this.inObj.readObject();
-                this.menu.renderException(e);
-                return e;
-            default:
-                throw new InvalidServerResponseException("The server response is invalid");
-        }
-        }
-        catch(IOException | ClassNotFoundException e){
+
+    private Object receiveResponse() throws InvalidServerResponseException {
+        try {
+            switch (this.inObj.readInt()) {
+                case ControllerConst.successVal:
+                    return this.inObj.readObject();
+                case ControllerConst.failureVal:
+                    Throwable e = (Throwable) this.inObj.readObject();
+                    this.menu.renderException(e);
+                    return e;
+                default:
+                    throw new InvalidServerResponseException("The server response is invalid");
+            }
+        } catch (IOException | ClassNotFoundException e) {
             this.menu.renderException(e);
         }
         return null;
     }
-    
-    private boolean sendCommand(Flags cmd){
-        return true;
-    }
-    private boolean connect(){
-        try{
-        this.socket = new Socket(ClientController.localhost,ClientController.PORT);
-        if(!socket.isConnected())
-            return false;
-        this.inObj = new ObjectInputStream(new BufferedInputStream(this.socket.getInputStream()));
-        this.outObj = new ObjectOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
-        this.outObj.flush();
-        return true;
-        }
-        catch(IOException e){
+
+    private boolean connect() {
+        try {
+            this.socket = new Socket(ClientController.localhost, ClientController.PORT);
+            if (!socket.isConnected()) {
+                return false;
+            }
+            this.inObj = new ObjectInputStream(new BufferedInputStream(this.socket.getInputStream()));
+            this.outObj = new ObjectOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
+            this.outObj.flush();
+            return true;
+        } catch (IOException e) {
             this.menu.renderException(e);
             return false;
         }

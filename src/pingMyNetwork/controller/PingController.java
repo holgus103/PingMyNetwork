@@ -35,6 +35,7 @@ public class PingController implements ControllerConst {
      */
     private boolean isDiscoveryRunning;
     private long lastRefresh;
+    private IPv4Address lastUsedInterface;
     private List<IPv4Address> onlineIPs = new ArrayList<>();
     /**
      * ServerSocket for accepting clients
@@ -72,21 +73,18 @@ public class PingController implements ControllerConst {
 
         private void ping(IPv4Address ip, int sec) {
             isDiscoveryRunning = true;
+            lastUsedInterface = ip;
             try {
-                onlineIPs.add(new IPv4Address("192.168.18.100"));
-                this.sendResponse(onlineIPs.get(0), isDiscoveryRunning);
-                onlineIPs.add(new IPv4Address("192.168.18.102"));
-                this.sendResponse(onlineIPs.get(1), true);
-//            for(IPv4Address val:getSubnetIPs(ip)){
-//                if(val.isReachable(sec)){
-//                    onlineIPs.add(val);
-//                    this.sendResponse(val, true);
-//                }
-//            }
+            for(IPv4Address val:getSubnetIPs(ip)){
+                if(val.isReachable(sec)){
+                    onlineIPs.add(val);
+                    this.sendResponse(val, true);
+                }
+            }
                 this.sendResponse(null, true);
             isDiscoveryRunning = false;
             lastRefresh = System.currentTimeMillis() / 1000L;
-            } catch (IndexOutOfBoundsException | InvalidIPAddressException e) {
+            } catch (IndexOutOfBoundsException | IOException e) {
                 this.sendResponse(e, false);
                 logException(e);
             }
@@ -153,10 +151,10 @@ public class PingController implements ControllerConst {
                             }
                             break;
                         case PING_FLAG:
-                            if (((lastRefresh == 0 || lastRefresh - System.currentTimeMillis() / 1000L > 10000)) && !isDiscoveryRunning) {
-                                isDiscoveryRunning = true;
                                 IPv4Address ip = (IPv4Address) in.readObject();
                                 int timeout = in.readInt();
+                            if (((lastRefresh == 0 || lastRefresh - System.currentTimeMillis() / 1000L > 10000) || !ip.toString().equals(lastUsedInterface.toString()) && !isDiscoveryRunning)) {
+                                isDiscoveryRunning = true;
                                 this.ping(ip, timeout);
                             } else {
                                 while (isDiscoveryRunning) {
