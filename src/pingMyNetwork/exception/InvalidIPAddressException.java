@@ -6,7 +6,7 @@
 package pingMyNetwork.exception;
 
 /**
- *
+ * Exception indicating an invalid IP address
  * @author Jakub Suchan
  * @version     %I%, %G%
  * @since       1.0

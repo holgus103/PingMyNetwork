@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import pingMyNetwork.model.IPv4Address;
 
 /**
- *
+ * Console view class
  * @author Jakub Suchan
  * @version     %I%, %G%
  * @since       1.0
@@ -46,12 +46,13 @@ public class ConsoleOutput implements ViewInterface{
     /**
      * In case the used has provided invalid arguments 
      */
+    @Override
     public void renderArgsError(){
         System.out.println("Invalid arguments! Use -h for help");
     }
     
     /**
-     * 
+     * Renders the initializer
      * @param ip IP to be displayed
      */
     @Override
@@ -60,7 +61,7 @@ public class ConsoleOutput implements ViewInterface{
     }
     
     /**
-     *
+     * Renders the ending 
      * @param result result to be displayed
      */
     @Override
@@ -68,7 +69,7 @@ public class ConsoleOutput implements ViewInterface{
         System.out.println("Discovery finished. Finds: " + result);
     }
     /**
-     *
+     * Displays an exception message
      * @param e Exception to be logged
      */
     @Override

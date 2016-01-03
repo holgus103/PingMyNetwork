@@ -6,11 +6,17 @@
 package pingMyNetwork.exception;
 
 /**
- *
- * @author Administrator
+ * Exception indicating an invalid server response
+ * @author Jakub Suchan
+ * @version     %I%, %G%
+ * @since       1.0
  */
 public class InvalidServerResponseException extends Exception{
 
+    /**
+     * Constructor
+     * @param message Exception message
+     */
     public InvalidServerResponseException(String message) {
         super(message);
     }

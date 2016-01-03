@@ -7,9 +7,8 @@ package pingMyNetwork.controller;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.awt.event.WindowStateListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -31,15 +30,18 @@ import pingMyNetwork.view.MainWindow;
 import pingMyNetwork.view.ViewInterface;
 
 /**
- *
- * @author Administrator
+ * @version     %I%, %G%
+ * @since       1.0
+ * @author Jakub Suchan
+ * Main controller of the clien program
  */
 public class ClientController implements ControllerConst {
-
-    private static final String localhost = "127.0.0.1";
-    private static final int PORT = 9999;
     /**
-     * The default interface used for pinging
+     * Localhost string constant
+     */
+    private static final String localhost = "127.0.0.1";
+    /**
+     * The default interface id used for pinging
      */
     private static final int DEFAULT_INTERFACE = 0;
     /**
@@ -47,7 +49,7 @@ public class ClientController implements ControllerConst {
      */
     private static final int DEFAULT_TIMEOUT = 1000;
     /**
-     * Selected interface
+     * Selected interface address
      */
     private String currentInterface;
     /**
@@ -59,20 +61,29 @@ public class ClientController implements ControllerConst {
      */
     private ViewInterface menu;
     /**
-     *
+     *  Socket used for connections with the server
      */
     private Socket socket;
     /**
-     *
+     * Stream for reading data from the server
      */
     private ObjectInputStream inObj;
     /**
-     *
+     *  Stream for sending data to the server
      */
     private ObjectOutputStream outObj;
-
+    /**
+     * @version     %I%, %G%
+     * @since       1.0
+     * @author Jakub Suchan
+     * Private class used to update the UI asynchronously whenever a IP gets discovered
+     */
     private class AsynchUpdates extends SwingWorker<Void, IPv4Address> {
-
+        /**
+         * Background job waiting for new IPs from the discovery
+         * @return null
+         * @throws Exception 
+         */
         @Override
         protected Void doInBackground() throws Exception {
             try {
@@ -88,13 +99,18 @@ public class ClientController implements ControllerConst {
             }
             return null;
         }
-
+        /**
+         * Unblocks the discovery for the client
+         */
         @Override
         protected void done() {
             super.done();
             isDiscoveryRunning = false;
         }
-
+        /**
+         * Pushes new IPs to the view
+         * @param ips List of IPs to display
+         */
         @Override
         protected void process(List<IPv4Address> ips) {
             for (IPv4Address value : ips) {
@@ -108,7 +124,7 @@ public class ClientController implements ControllerConst {
      * Main method of the controller that analyzes user input and fires up the
      * corresponding methods.
      *
-     * @param args
+     * @param args Command line arguments
      */
     public void run(String[] args) {
         if (args.length == 0) {
@@ -125,10 +141,9 @@ public class ClientController implements ControllerConst {
                             selectInterface(e);
                         }
                     },
-                    new WindowStateListener() {
-
+                    new WindowAdapter() {
                         @Override
-                        public void windowStateChanged(WindowEvent e) {
+                        public void windowClosing(WindowEvent e) {
                             sendExitMessage();
                         }
                     });
@@ -215,7 +230,6 @@ public class ClientController implements ControllerConst {
 
     /**
      * Method for action handling
-     *
      * @param e ActionEvent to be handled
      */
     private void actions(ActionEvent e) {
@@ -241,8 +255,7 @@ public class ClientController implements ControllerConst {
 
     /**
      * Updates the pinging interface
-     *
-     * @param e
+     * @param e TreeSelectionEvent
      */
     private void selectInterface(TreeSelectionEvent e) {
 
@@ -251,7 +264,10 @@ public class ClientController implements ControllerConst {
             this.currentInterface = selection.toString();
         }
     }
-
+    /**
+     * Reads the interfaces available on the server machine
+     * @return ArrayList of interfaces available on the server
+     */
     private ArrayList<IPv4Address> getInterfaces() {
         try {
             this.outObj.writeUTF(Flags.LIST_FLAG.toString());
@@ -265,7 +281,10 @@ public class ClientController implements ControllerConst {
             return null;
         }
     }
-
+    /**
+     * Performs a handshake between the server and the client to check if both are still present
+     * @return Whether the handshake was successful or not 
+     */
     private boolean handShake() {
         try {
             if (ClientController.handShakeVal == this.inObj.readInt()) {
@@ -280,7 +299,12 @@ public class ClientController implements ControllerConst {
         }
 
     }
-
+   /**
+    * Requests available nodes from the server
+    * @param id Interface id
+    * @param timeout Tiemout used for pinging
+    * @return Whether the request was successful or not
+    */
     private boolean getOnlineIPs(int id, int timeout) {
         if (this.currentInterface == null) {
             this.currentInterface = this.getInterfaces().get(id >= 0 ? id : 0).toString();
@@ -305,7 +329,9 @@ public class ClientController implements ControllerConst {
         }
         return false;
     }
-
+    /**
+     * Sends an exit message to the server
+     */
     private void sendExitMessage() {
         try {
             this.outObj.writeUTF(Flags.EXIT_FLAG.toString());
@@ -318,7 +344,11 @@ public class ClientController implements ControllerConst {
             this.menu.renderException(e);
         }
     }
-
+    /**
+     * Receives a formated server response with header
+     * @return Object to be received from the server
+     * @throws InvalidServerResponseException 
+     */
     private Object receiveResponse() throws InvalidServerResponseException {
         try {
             switch (this.inObj.readInt()) {
@@ -336,10 +366,13 @@ public class ClientController implements ControllerConst {
         }
         return null;
     }
-
+    /**
+     * Connects to the server
+     * @return Whether the connection occurred
+     */
     private boolean connect() {
         try {
-            this.socket = new Socket(ClientController.localhost, ClientController.PORT);
+            this.socket = new Socket(ClientController.localhost, ControllerConst.PORT);
             if (!socket.isConnected()) {
                 return false;
             }

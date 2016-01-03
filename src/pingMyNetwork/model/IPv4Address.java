@@ -92,14 +92,14 @@ public class IPv4Address implements Serializable{
 
             }
             addr[i] = Short.parseShort(ip.substring(0, endIndex));
-            if (addr[i] > this.MAX_IP  || addr[i]<0) {
+            if (addr[i] > IPv4Address.MAX_IP  || addr[i]<0) {
                 throw new InvalidIPAddressException("The provided IP address is invalid");
             }
             ip = ip.substring(endIndex + 1);
 
         }
         for (int i = 0; i < IPv4Address.IP4_GROUPS; i++) {
-            this.address |= addr[i] << ((this.IP4_GROUPS - 1) * this.BITS_PER_BYTE - this.BITS_PER_BYTE * i);
+            this.address |= addr[i] << ((IPv4Address.IP4_GROUPS - 1) * IPv4Address.BITS_PER_BYTE - IPv4Address.BITS_PER_BYTE * i);
         }
     }
 
@@ -125,10 +125,10 @@ public class IPv4Address implements Serializable{
     }
     @Override
     public String toString() {
-        String ret = "" + (this.address >> (this.IP4_GROUPS - 1) * this.BITS_PER_BYTE & 0xFF);
+        String ret = "" + (this.address >> (IPv4Address.IP4_GROUPS - 1) * IPv4Address.BITS_PER_BYTE & 0xFF);
         for (int i = 1; i < IPv4Address.IP4_GROUPS; i++) {
             ret += ".";
-            ret += this.address >> ((this.IP4_GROUPS - 1) * this.BITS_PER_BYTE - this.BITS_PER_BYTE * i) & 0xFF;
+            ret += this.address >> ((IPv4Address.IP4_GROUPS - 1) * IPv4Address.BITS_PER_BYTE - IPv4Address.BITS_PER_BYTE * i) & 0xFF;
         }
         return ret;
     }
@@ -136,7 +136,6 @@ public class IPv4Address implements Serializable{
     /**
      *
      * @param timeout time the program waits (in ms) for a response
-     * @param multithreading determines whether multi-threading is enabled or not
      * @return whether or not a IP is reachable
      * @throws java.io.IOException
      */

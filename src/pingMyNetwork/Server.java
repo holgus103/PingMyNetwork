@@ -5,10 +5,10 @@ import java.io.IOException;
 import pingMyNetwork.controller.PingController;
 
 /**
- *
  * @author Jakub Suchan
  * @version     %I%, %G%
  * @since       1.0
+ * Main class of the server program
  */
 public class Server {
      /**

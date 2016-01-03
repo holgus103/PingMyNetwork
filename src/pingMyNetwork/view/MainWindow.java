@@ -26,15 +26,17 @@ public class MainWindow implements ViewInterface {
      */
     private JTree ipTree;
     /**
-     * Actionlistener to be added to the buttons
+     * ActionListener to be added to the buttons
      */
-    private ActionListener menuListener;
+    private final ActionListener menuListener;
     /**
      * TheSelectionListener to change the Interface ID
      */
-    private TreeSelectionListener treeListener;
-    
-    private WindowStateListener stateListener;
+    private final TreeSelectionListener treeListener;
+    /**
+     * The WindowAdapter used for closing the connection with the server when the window is closing
+     */
+    private final WindowAdapter windowAdapter;
     /**
      * Main JFrame of the view
      */
@@ -133,7 +135,7 @@ public class MainWindow implements ViewInterface {
      */
     private void createAndShowGUI() {
         this.frame = new JFrame("PingMyNetwork");
-        this.frame.addWindowStateListener(this.stateListener);
+        this.frame.addWindowListener(this.windowAdapter);
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JComponent component = (JComponent) this.frame.getContentPane();
         this.frame.setPreferredSize(new Dimension(800,600));
@@ -240,12 +242,13 @@ public class MainWindow implements ViewInterface {
     /**
      * Creates a new window
      * @param listener ActionListener for the buttons
-     * @param treeListener TreeSelectionListener that changes the interface ID
+     * @param treeListener TreeSelectionListener that changes the interface ID 
+     * @param windowAdapter WindowAdapter used to handle WindowEvents
      */
-    public MainWindow(ActionListener listener, TreeSelectionListener treeListener, WindowStateListener stateListener){
+    public MainWindow(ActionListener listener, TreeSelectionListener treeListener, WindowAdapter windowAdapter){
         this.treeListener = treeListener;
         this.menuListener = listener;
-        this.stateListener = stateListener;
+        this.windowAdapter = windowAdapter;
         this.isShowingInterfaces = false;
     }
 

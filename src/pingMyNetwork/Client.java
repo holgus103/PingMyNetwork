@@ -3,10 +3,10 @@ package pingMyNetwork;
 import pingMyNetwork.controller.ClientController;
 
 /**
- *
  * @author Jakub Suchan
  * @version     %I%, %G%
  * @since       1.0
+ * Main class of the client program
  */
 public class Client {
     
