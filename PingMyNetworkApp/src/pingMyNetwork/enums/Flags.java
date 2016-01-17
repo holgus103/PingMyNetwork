@@ -37,7 +37,7 @@ public enum Flags {
      * Flag for error
      */
     ERROR_FLAG("-e"),
-
+    
     /**
      * Flag for exit
      */

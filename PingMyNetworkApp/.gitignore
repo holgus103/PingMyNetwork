@@ -1,0 +1,8 @@
+.idea/
+nbproject/
+build/
+manifest.mf
+build.xml
+dist/
+javadoc/
+bin/
