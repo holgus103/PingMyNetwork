@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.SocketException;
 import java.util.Date;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import org.omg.PortableServer.Servant;
 import pingMyNetwork.enums.CookieKeys;
 import pingMyNetwork.enums.SessionKeys;
 import pingMyNetwork.exception.InvalidIPAddressException;
@@ -28,7 +30,7 @@ public class PingServlet extends HistoryServlet {
         HttpSession session = req.getSession();
         if (this.controller.isDiscoveryRunning()) {
             Object ip = session.getAttribute(SessionKeys.usedIP.name());
-            if (this.currentIP.toString().equals(ip.toString())) {
+            if (ip!= null && this.currentIP.toString().equals(ip.toString())) {
                 this.displayResults(req, resp);
             } else {
                 this.busy(req, resp);
@@ -37,7 +39,7 @@ public class PingServlet extends HistoryServlet {
         else{
             String address = req.getParameter(SessionKeys.usedIP.name());
             Boolean isWaiting = (Boolean) session.getAttribute(SessionKeys.isWaiting.name());
-            if(address != null && isWaiting == false){
+            if(address != null && isWaiting!= null && isWaiting == false){
                 this.ping(req, resp,address);
                 resp.addCookie(new Cookie(CookieKeys.lastUsedIP.name(),address));
                 resp.addCookie(new Cookie(CookieKeys.lastScan.name(),(new Date()).toString()));
@@ -45,6 +47,7 @@ public class PingServlet extends HistoryServlet {
                     session.setAttribute(SessionKeys.isWaiting.name(), true);
                     session.setAttribute(SessionKeys.usedIP.name(), new IPv4Address(address));
                 } catch (InvalidIPAddressException e) {
+                    this.log(e.getMessage());
                     this.renderException(req, resp, e);
                 }
             }
@@ -88,6 +91,7 @@ public class PingServlet extends HistoryServlet {
         }
         }
         catch(IndexOutOfBoundsException | InvalidIPAddressException | NumberFormatException | SocketException e){
+            this.log(e.getMessage());
             this.renderException(req, resp, e);
         }
         req.getRequestDispatcher("/form_bottom.html").include(req, resp);
@@ -98,7 +102,8 @@ public class PingServlet extends HistoryServlet {
         this.currentIP = new IPv4Address(ip);
         }
         catch(InvalidIPAddressException e){
-            
+            this.log(e.getMessage());
+            this.renderException(req, resp, e);
         }
         resp.setHeader("Refresh", "1");
         resp.setContentType("text/html; charset=ISO-8859-2");
@@ -106,17 +111,23 @@ public class PingServlet extends HistoryServlet {
             this.controller.ping(new IPv4Address(ip), 1000);
 
         } catch (InvalidIPAddressException e) {
-
+            this.log(e.getMessage());
+            this.renderException(req, resp, e);
         }
 
     }
 
     private void busy(HttpServletRequest req, HttpServletResponse resp) {
-        try {
-            resp.getWriter().print("Pinging is currently unavailable");
-        } catch (IOException e) {
-
+        try{
+            req.getRequestDispatcher("/header.html").include(req,resp);
+            req.getRequestDispatcher("/busy.html").include(req,resp);
+        }
+        catch(ServletException | IOException e){
+            this.log(e.getMessage());
+            this.renderException(req, resp, e);
         }
     }
+
+    
     
 }
