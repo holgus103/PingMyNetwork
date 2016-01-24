@@ -1,8 +1,9 @@
 package pingMyNetwork.model;
 
 import java.io.IOException;
-import java.io.Serializable;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import org.icmp4j.IcmpPingRequest;
 import org.icmp4j.IcmpPingResponse;
 import org.icmp4j.IcmpPingUtil;
@@ -14,7 +15,7 @@ import pingMyNetwork.exception.InvalidIPAddressException;
  * @version %I%, %G%
  * @since 1.0
  */
-public class IPv4Address extends PingMyNetworkModel {
+public class IPv4Address {
 
     // Private members
     /**
@@ -34,34 +35,24 @@ public class IPv4Address extends PingMyNetworkModel {
      */
     public static final int BINARY_BASE = 2;
     /**
-     * Default mask value
-     */
-    private static final int DEFAULT_MASK = 24;
-    /**
      * Max IP value
      */
     private static final int MAX_IP = 255;
-    private static final String TABLE_NAME = "nodes";
+    public static final String TABLE_NAME = "nodes";
     // Private properties
     /**
      * Raw address
      */
     private int address;
-    /**
-     * IP mask
-     */
     private int mask;
     
-    private int scanId;
-    
-    
-    /**
-     * @return Returns the mask of the IP address
-     */
-    public int getMask() {
-        return this.mask;
+    private void createTable(Connection con) throws ClassNotFoundException, SQLException {
+        Statement statement = con.createStatement();
+        statement.executeUpdate("CREATE TABLE " + IPv4Address.TABLE_NAME + "("
+                + "nodeId INTEGER not null PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), "
+                + "scanId INTEGER, "
+                + "address VARCHAR(15))");
     }
-
 
     /**
      * Returns the binary version of the IP address (on a 32-bit int)
@@ -74,15 +65,13 @@ public class IPv4Address extends PingMyNetworkModel {
 
     /**
      * @param ip IP address to initialize the object with
-     * @param mask Mask of the IP address
      * @throws pingMyNetwork.exception.InvalidIPAddressException
      */
-    public IPv4Address(String ip, int mask) throws NumberFormatException, IndexOutOfBoundsException, InvalidIPAddressException {
+    public IPv4Address(String ip) throws NumberFormatException, IndexOutOfBoundsException, InvalidIPAddressException {
         if (ip.charAt(0) == '/') {
             ip = ip.substring(1);
         }
         this.address = 0;
-        this.mask = mask < IPv4Address.BITS_PER_BYTE || mask > IPv4Address.IPv4_BITS ? (IPv4Address.IP4_GROUPS - 1) * IPv4Address.BITS_PER_BYTE : mask;
         short addr[] = new short[IPv4Address.IP4_GROUPS];
         int endIndex;
         for (int i = 0; i < IPv4Address.IP4_GROUPS; i++) {
@@ -109,20 +98,8 @@ public class IPv4Address extends PingMyNetworkModel {
      * @param ip IP address of the new object
      * @param mask Mask of the new IP address
      */
-    public IPv4Address(int ip, int mask) {
+    public IPv4Address(int ip) {
         this.address = ip;
-        this.mask = mask;
-    }
-
-    /**
-     *
-     * @param ip IP address of the new object
-     * @throws NumberFormatException
-     * @throws IndexOutOfBoundsException
-     * @throws InvalidIPAddressException
-     */
-    public IPv4Address(String ip) throws NumberFormatException, IndexOutOfBoundsException, InvalidIPAddressException {
-        this(ip, DEFAULT_MASK);
     }
 
     /**
@@ -155,24 +132,17 @@ public class IPv4Address extends PingMyNetworkModel {
 
     }
 
-    @Override
-    public void save() throws ClassNotFoundException, SQLException {
+    public void save(Connection con, int scanID) throws ClassNotFoundException, SQLException {
         try{
-            this.createTable();
+            this.createTable(con);
         }
         catch(SQLException e){
             System.out.println("Table already exists");
         }
-        this.executeSQL("INSERT into " + IPv4Address.TABLE_NAME + "(scanID,address) values(" + this.scanId  + ",'" + this.toString()  + "')");
+        Statement statement = con.createStatement();
+        statement.executeUpdate("INSERT into " + IPv4Address.TABLE_NAME + "(scanID,address) values(" + scanID  + ",'" + this.toString()  + "')");
     }
 
-    @Override
-    protected void createTable() throws ClassNotFoundException, SQLException {
-        this.executeSQL("CREATE TABLE " + IPv4Address.TABLE_NAME + "("
-                + "nodeId INTEGER not null PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), "
-                + "scanId INTEGER, "
-                + "address VARCHAR(15))");
-    }
     
 
 }

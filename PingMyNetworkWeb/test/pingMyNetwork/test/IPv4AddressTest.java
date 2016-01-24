@@ -106,7 +106,7 @@ public class IPv4AddressTest {
                 System.out.println("Record did not exist");
             }
             this.address = new IPv4Address(IPv4AddressTest.LOOPBACK);
-            this.address.save();
+            this.address.save(con,0);
 
             ResultSet res = statement.executeQuery("Select * from " + TABLE_NAME + " where address = '" + IPv4AddressTest.LOOPBACK +"' and scanID = 0");
             if(!res.next()){

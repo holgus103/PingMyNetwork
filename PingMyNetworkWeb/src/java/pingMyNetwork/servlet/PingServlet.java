@@ -2,6 +2,7 @@ package pingMyNetwork.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InterfaceAddress;
 import java.net.SocketException;
 import java.util.Date;
 import javax.servlet.ServletConfig;
@@ -86,8 +87,8 @@ public class PingServlet extends HistoryServlet {
                 + "</p></div>");
         req.getRequestDispatcher("/form_top.html").include(req, resp);
         try{
-        for (IPv4Address ip : this.controller.getLocalIPs()) {
-            out.print("<option value='" + ip.toString() + "'>" + ip.toString() + "</option>");
+        for (InterfaceAddress ip : this.controller.getLocalIPs()) {
+            out.print("<option value='" + ip.getAddress().toString() + "'>" + ip.getAddress().toString() + "</option>");
         }
         }
         catch(IndexOutOfBoundsException | InvalidIPAddressException | NumberFormatException | SocketException e){

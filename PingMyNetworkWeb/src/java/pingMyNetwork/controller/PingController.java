@@ -4,6 +4,9 @@ import java.net.Inet4Address;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -27,11 +30,12 @@ public class PingController {
     /**
      * Array of current machine's IPs
      */
-    private ArrayList<IPv4Address> ips;
+    private ArrayList<InterfaceAddress> ips;
     /**
      * Subnet IPs
      */
-    private ArrayList<IPv4Address> onlineNodes = new ArrayList<IPv4Address>();
+    private Scan scan;
+    private Connection con;
     /**
      * Blocks multiple discoveries at a time
      */
@@ -59,13 +63,11 @@ public class PingController {
          * Counter used to determine the amount of discovered IPs
          */
         private ArrayList<IPv4Address> output;
-
         /**
          * Worker constructor
          *
          * @param ip IP to ping
          * @param t timeout
-         * @param ipCounter Counter to be incremented
          */
         public Worker(IPv4Address ip, int t) {
             this.ip = ip;
@@ -80,9 +82,9 @@ public class PingController {
          */
         @Override
         public Void doInBackground() throws Exception {
-            for(IPv4Address value:getSubnetIPs(ip)){
+            for(IPv4Address value:scan.getSubnetIPs(ip)){
                 if(value.isReachable(timeout))
-                    onlineNodes.add(value);
+                    scan.add(value);
             }
             return null;
         }
@@ -95,21 +97,6 @@ public class PingController {
             isDiscoveryRunning = false;
         }
     }
-    
-    /**
-     * Method generating all IPs of a subnet.
-     *
-     * @return a set of IPs from the machine's subnet
-     */
-    private ArrayList<IPv4Address> getSubnetIPs(IPv4Address address) {
-        ArrayList<IPv4Address> addressList = new ArrayList<>();
-        int count = (int) Math.pow(IPv4Address.BINARY_BASE, IPv4Address.IPv4_BITS - address.getMask());
-        int prefix = address.getRawIP() & 0xFFFFFFFF << (IPv4Address.IPv4_BITS - address.getMask());
-        for (int i = 0; i < count; i++) {
-            addressList.add(new IPv4Address(prefix | i, address.getMask()));
-        }
-        return addressList;
-    }
 
     /**
      * The constructor initializes the array of references to threads and
@@ -119,8 +106,11 @@ public class PingController {
      * @throws java.lang.IndexOutOfBoundsException
      * @throws java.lang.NumberFormatException
      */
-    public PingController() throws IndexOutOfBoundsException, InvalidIPAddressException, NumberFormatException, SocketException{
+    public PingController(String connectionString, String dbUser, String dbPassword) throws ClassNotFoundException, SQLException, IndexOutOfBoundsException, 
+                                                                                        InvalidIPAddressException, NumberFormatException, SocketException{
         this.ips = this.getLocalIPs();
+        Class.forName("org.apache.derby.jdbc.ClientDriver");
+        this.con = DriverManager.getConnection(connectionString,dbUser,dbPassword);
     }
 
 
@@ -151,9 +141,11 @@ public class PingController {
      *
      * @return ArrayList of online IPs
      */
-    public ArrayList<IPv4Address> getResults(){
-        return this.onlineNodes;
+    public ArrayList<IPv4Address> getResults() throws SQLException, InvalidIPAddressException{
+        return this.scan.getOnlineNodes(this.con);
     }
+    
+        
     /**
      * Method fetching all IPs of the current machine
      *
@@ -163,15 +155,16 @@ public class PingController {
      * @throws java.lang.IndexOutOfBoundsException
      * @throws java.lang.NumberFormatException
      */
-    public ArrayList<IPv4Address> getLocalIPs() throws IndexOutOfBoundsException, InvalidIPAddressException, NumberFormatException, SocketException{
-        ArrayList<IPv4Address> validIPs = new ArrayList<>();
+    public ArrayList<InterfaceAddress> getLocalIPs() throws IndexOutOfBoundsException, InvalidIPAddressException, NumberFormatException, SocketException{
+        ArrayList<InterfaceAddress> validIPs = new ArrayList<InterfaceAddress>();
             Enumeration<NetworkInterface> netInts = NetworkInterface.getNetworkInterfaces();
             while (netInts.hasMoreElements()) {
                 List<InterfaceAddress> intAddrs = netInts.nextElement().getInterfaceAddresses();
                 for (InterfaceAddress value : intAddrs) {
                     // Check if IP is IPv4 or loopback
                     if (value.getAddress() instanceof Inet4Address && !value.getAddress().isLoopbackAddress()) {
-                        validIPs.add(new IPv4Address(value.getAddress().toString(), value.getNetworkPrefixLength()));
+                        validIPs.add(value);
+                        //validIPs.add(new IPv4Address(value.getAddress().toString()));
                     }
                 }
             }
