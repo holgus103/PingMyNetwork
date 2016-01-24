@@ -16,8 +16,6 @@ import pingMyNetwork.exception.InvalidIPAddressException;
  * @since 1.0
  */
 public class IPv4Address {
-
-    // Private members
     /**
      * Bits per Byte
      */
@@ -38,14 +36,29 @@ public class IPv4Address {
      * Max IP value
      */
     private static final int MAX_IP = 255;
+    /**
+     * Default IP mask
+     */
+    private static final int DEFAULT_MASK = 24;
+    /**
+     * Model table name
+     */
     public static final String TABLE_NAME = "nodes";
-    // Private properties
     /**
      * Raw address
      */
     private int address;
+    /**
+     * IP mask
+     */
     private int mask;
     
+    /**
+     * Creates a table in the database connected to
+     * @param con Database connection
+     * @throws ClassNotFoundException
+     * @throws SQLException 
+     */
     private void createTable(Connection con) throws ClassNotFoundException, SQLException {
         Statement statement = con.createStatement();
         statement.executeUpdate("CREATE TABLE " + IPv4Address.TABLE_NAME + "("
@@ -56,21 +69,30 @@ public class IPv4Address {
 
     /**
      * Returns the binary version of the IP address (on a 32-bit int)
-     *
      * @return raw IP address (as int)
      */
     public int getRawIP() {
         return this.address;
     }
-
+    
+    /**
+     * Returns the IP mask
+     * @return IP mask
+     */
+    public int getMask(){
+        return this.mask;
+    }
+    
     /**
      * @param ip IP address to initialize the object with
+     * @param mask IP address mask
      * @throws pingMyNetwork.exception.InvalidIPAddressException
      */
-    public IPv4Address(String ip) throws NumberFormatException, IndexOutOfBoundsException, InvalidIPAddressException {
+    public IPv4Address(String ip, int mask) throws InvalidIPAddressException {
         if (ip.charAt(0) == '/') {
             ip = ip.substring(1);
         }
+        this.mask = ( mask < 0 | mask > IPv4Address.IPv4_BITS) ? IPv4Address.DEFAULT_MASK : mask; 
         this.address = 0;
         short addr[] = new short[IPv4Address.IP4_GROUPS];
         int endIndex;
@@ -94,17 +116,23 @@ public class IPv4Address {
     }
 
     /**
-     *
      * @param ip IP address of the new object
-     * @param mask Mask of the new IP address
      */
     public IPv4Address(int ip) {
         this.address = ip;
+        this.mask = IPv4Address.DEFAULT_MASK;
     }
-
+    
+    /**
+     * @param ip IP String to generate the object from
+     * @throws InvalidIPAddressException
+     */
+    public IPv4Address(String ip) throws InvalidIPAddressException {
+        this(ip, IPv4Address.DEFAULT_MASK);
+    }
+    
     /**
      * Converts the IP to a string
-     *
      * @return IP as String
      */
     @Override
@@ -118,7 +146,7 @@ public class IPv4Address {
     }
 
     /**
-     *
+     * Check whether the IP is reachable
      * @param timeout time the program waits (in ms) for a response
      * @return whether or not a IP is reachable
      * @throws java.io.IOException
@@ -132,6 +160,13 @@ public class IPv4Address {
 
     }
 
+    /**
+     * Saves the model in the database
+     * @param con Database connection
+     * @param scanID Scan ID 
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     */
     public void save(Connection con, int scanID) throws ClassNotFoundException, SQLException {
         try{
             this.createTable(con);

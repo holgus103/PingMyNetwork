@@ -6,10 +6,19 @@
 package pingMyNetwork.enums;
 
 /**
- *
- * @author Administrator
+ * @author Jakub Suchan
+ * @version %I%, %G%
+ * @since 1.0
  */
 public enum CookieKeys {
+
+    /**
+     * Cookie name for last scan
+     */
     lastScan,
+
+    /**
+     * Cookie name for most recently used IP
+     */
     lastUsedIP, 
 }

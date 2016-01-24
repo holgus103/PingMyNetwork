@@ -92,6 +92,9 @@ public class IPv4AddressTest {
         }
     }  
         
+    /**
+     * Tests the save method
+     */
     @Test
     public void testSave(){
         Connection con = null;

@@ -30,6 +30,9 @@ public class ScanTest {
     private Scan scan;
     private Connection con;
 
+    /**
+     * Prepares the database connection
+     */
     @Before
     public void setup() {
         try {
@@ -40,6 +43,9 @@ public class ScanTest {
         }
     }
 
+    /**
+     * Closes the database connection
+     */
     @After
     public void teardown() {
         try {
@@ -49,44 +55,56 @@ public class ScanTest {
         }
     }
 
+    /**
+     * Tests the save methods without any related nodes
+     */
     @Test
     public void testSave() {
-        this.scan = new Scan(new Date(), 24);
         try {
+            this.scan = new Scan(new Date(), 24, new IPv4Address(ScanTest.LOOPBACK));
             this.scan.save(this.con);
-        } catch (ClassNotFoundException | SQLException e) {
+        } catch (ClassNotFoundException | SQLException | InvalidIPAddressException e) {
             fail(e.getMessage());
         }
     }
     
+    /**
+     * Tests the save method with related nodes
+     */
     @Test
     public void testSaveWithNodes(){
-        this.scan = new Scan(new Date(),29);
         try{
+            this.scan = new Scan(new Date(),29, new IPv4Address(ScanTest.LOOPBACK));
             scan.add(new IPv4Address(ScanTest.LOOPBACK));
             this.scan.save(this.con);
         }
-        catch(InvalidIPAddressException | ClassNotFoundException |IndexOutOfBoundsException | NumberFormatException | SQLException e){
+        catch(InvalidIPAddressException | ClassNotFoundException | SQLException e){
             fail(e.getMessage());
         }
         
     }
 
+    /**
+     * Tests the indexing method
+     */
     @Test
     public void testSelect() {
         try {
             ArrayList<Scan> asd = Scan.getIndex(this.con);
-        } catch (SQLException e) {
+        } catch (SQLException | InvalidIPAddressException e) {
             fail(e.getMessage());
         }
     }
 
+    /**
+     * Tests the get getNodes method
+     */
     @Test
     public void testEmptyGetNodes() {
         try {
-            this.scan = new Scan(new Date(), 30);
-            this.scan.getOnlineNodes(this.con);
-        } catch(InvalidIPAddressException |SQLException e){
+            this.scan = new Scan(new Date(), 30, new IPv4Address(ScanTest.LOOPBACK));
+            this.scan.getOnlineNodes();
+        } catch(InvalidIPAddressException e){
             fail(e.getMessage());
         }  
     }
